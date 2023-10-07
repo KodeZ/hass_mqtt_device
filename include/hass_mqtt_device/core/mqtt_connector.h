@@ -6,61 +6,124 @@
 
 #pragma once
 
+#include "hass_mqtt_device/core/device_base.h" // Assuming you have a base class for devices
+#include <memory>                              // For std::shared_ptr
+#include <mosquitto.h>
 #include <string>
 #include <vector>
-#include "device_base.h" // Assuming you have a base class for devices
 
 /**
- * @brief Class for connecting to an MQTT server and registering devices to listen for their MQTT topics
- * 
- * @note This class is not thread-safe, so it should only be used from one thread
+ * @brief Class for connecting to an MQTT server and registering devices to
+ * listen for their MQTT topics
+ *
+ * @note This class is not thread-safe, so it should only be used from one
+ * thread
  */
 
 class MQTTConnector {
 public:
-    /**
-     * @brief Construct a new MQTTConnector object
-     * 
-     * @param server The MQTT server to connect to
-     * @param username The username to use when connecting to the MQTT server
-     * @param password The password to use when connecting to the MQTT server
-     */
-    MQTTConnector(const std::string& server, const std::string& username, const std::string& password);
+  /**
+   * @brief Construct a new MQTTConnector object
+   *
+   * @param server The MQTT server to connect to
+   * @param username The username to use when connecting to the MQTT server
+   * @param password The password to use when connecting to the MQTT server
+   */
+  MQTTConnector(const std::string &server, const std::string &username,
+                const std::string &password);
 
-    /**
-     * @brief Connect to the MQTT server
-     */
-    bool connect();
+  /**
+   * @brief Connect to the MQTT server
+   */
+  bool connect();
 
-    /**
-     * @brief Disconnect from the MQTT server
-     */
-    void disconnect();
+  /**
+   * @brief Disconnect from the MQTT server
+   */
+  void disconnect();
 
-    /**
-     * @brief Check if connected to the MQTT server
-     * 
-     * @return true if connected to the MQTT server, false otherwise
-     */
-    bool isConnected() const;
+  /**
+   * @brief Check if connected to the MQTT server
+   *
+   * @return true if connected to the MQTT server, false otherwise
+   */
+  bool isConnected() const;
 
-    /**
-     * @brief Register a device to listen for its MQTT topics
-     * 
-     * @param device The device to register
-     */
-    void registerDevice(DeviceBase& device);
+  /**
+   * @brief Register a device to listen for its MQTT topics
+   *
+   * @param device The device to register
+   */
+  void registerDevice(std::shared_ptr<DeviceBase> device);
 
-    /**
-     * @brief Process incoming MQTT messages
-     * 
-     * @note This method should be called in the main loop
-     */
-    void processMessages();
+  /**
+   * @brief Process incoming MQTT messages. Needs to be called regularly with a
+   * timeout
+   *
+   * @note This method should be called in the main loop
+   *
+   * @param timeout The timeout in milliseconds
+   */
+  void processMessages(int timeout);
 
 private:
-    std::string m_server;
-    std::string m_username;
-    std::string m_password;
-    std::vector<DeviceBase*> m_registeredDevices; // List of registered devices
+  /**
+   * @brief Callback for incoming MQTT messages, implementing the on_message
+   *
+   * @param mosq The mosquitto instance
+   * @param obj The user data
+   * @param message The message
+   */
+  static void messageCallback(mosquitto *mosq, void *obj,
+                              const mosquitto_message *message);
+
+  /**
+   * @brief Callback for successful connection to the MQTT server, implementing
+   * on_connect
+   *
+   * @param mosq The mosquitto instance
+   * @param obj The user data
+   * @param rc The connection result
+   */
+  static void connectCallback(mosquitto *mosq, void *obj, int rc);
+
+  /**
+   * @brief Callback for disconnection from the MQTT server, implementing
+   * on_disconnect
+   *
+   * @param mosq The mosquitto instance
+   * @param obj The user data
+   * @param rc The disconnection result
+   */
+  static void disconnectCallback(mosquitto *mosq, void *obj, int rc);
+
+  /**
+   * @brief Callback for successful subscription to an MQTT topic, implementing
+   * on_subscribe
+   *
+   * @param mosq The mosquitto instance
+   * @param obj The user data
+   * @param mid The message ID
+   * @param qos_count The number of granted subscriptions
+   * @param granted_qos The granted QoS levels
+   */
+  static void subscribeCallback(mosquitto *mosq, void *obj, int mid,
+                                int qos_count, const int *granted_qos);
+
+  /**
+   * @brief Callback for unsuccessful subscription to an MQTT topic,
+   * implementing on_unsubscribe
+   *
+   * @param mosq The mosquitto instance
+   * @param obj The user data
+   * @param mid The message ID
+   */
+  static void unsubscribeCallback(mosquitto *mosq, void *obj, int mid);
+
+  std::string m_server;
+  std::string m_username;
+  std::string m_password;
+  std::vector<std::shared_ptr<DeviceBase>>
+      m_registeredDevices; // List of registered devices using smart pointers
+  mosquitto *m_mosquitto;
 };
