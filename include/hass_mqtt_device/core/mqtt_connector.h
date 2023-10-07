@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "hass_mqtt_device/core/device_base.h" // Assuming you have a base class for devices
-#include <memory>                              // For std::shared_ptr
+#include "device_base.h" // Assuming you have a base class for devices
+#include <memory>        // For std::shared_ptr
 #include <mosquitto.h>
 #include <string>
 #include <vector>
@@ -123,7 +123,8 @@ private:
   std::string m_server;
   std::string m_username;
   std::string m_password;
+  bool m_is_connected = false;
   std::vector<std::shared_ptr<DeviceBase>>
-      m_registeredDevices; // List of registered devices using smart pointers
+      m_registered_devices; // List of registered devices using smart pointers
   mosquitto *m_mosquitto;
 };

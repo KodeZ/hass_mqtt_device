@@ -2,67 +2,135 @@
 #include "hass_mqtt_device/core/mqtt_connector.h"
 
 // Include any other necessary headers
-#include "hass_mqtt_device/utils/logger.hpp" // For logging
+#include "hass_mqtt_device/logger/logger.hpp" // For logging
 
 // Constructor implementation
-MQTTConnector::MQTTConnector(const std::string& server, const std::string& username, const std::string& password)
+MQTTConnector::MQTTConnector(const std::string &server,
+                             const std::string &username,
+                             const std::string &password)
     : m_server(server), m_username(username), m_password(password) {
-    LOG_DEBUG("MQTTConnector created with server: {}", server);
+  LOG_DEBUG("MQTTConnector created with server: {}", server);
 
-    // Initialize the MQTT library
-    mosquitto_lib_init();
+  // Initialize the MQTT library
+  mosquitto_lib_init();
 }
 
 // Connect to the MQTT server
 bool MQTTConnector::connect() {
-    LOG_DEBUG("Connecting to MQTT server: {}", m_server);
+  LOG_DEBUG("Connecting to MQTT server: {}", m_server);
 
-    m_mosquitto = mosquitto_new(nullptr, true, nullptr);
-    if (!m_mosquitto) {
-        LOG_ERROR("Failed to create mosquitto instance");
-        return false;
-    }
-    mosquitto_username_pw_set(m_mosquitto, m_username.c_str(), m_password.c_str());
-    int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), 1883, 60);
+  m_mosquitto = mosquitto_new(nullptr, true, this);
+  if (!m_mosquitto) {
+    LOG_ERROR("Failed to create mosquitto instance");
+    return false;
+  }
+  mosquitto_username_pw_set(m_mosquitto, m_username.c_str(),
+                            m_password.c_str());
+  int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), 1883, 60);
+  if (rc != MOSQ_ERR_SUCCESS) {
+    LOG_ERROR("Failed to connect to MQTT server: {}", mosquitto_strerror(rc));
+    return false;
+  }
+  LOG_DEBUG("Connected to MQTT server: {}", m_server);
+
+  // Set up the callbacks
+  mosquitto_message_callback_set(m_mosquitto, messageCallback);
+  mosquitto_connect_callback_set(m_mosquitto, connectCallback);
+  mosquitto_disconnect_callback_set(m_mosquitto, disconnectCallback);
+  mosquitto_subscribe_callback_set(m_mosquitto, subscribeCallback);
+  mosquitto_unsubscribe_callback_set(m_mosquitto, unsubscribeCallback);
+
+  // Subscribe to the topics of the registered devices
+  for (auto &device : m_registered_devices) {
+    LOG_DEBUG("Subscribing to topic: {}", device->getTopic());
+    rc = mosquitto_subscribe(m_mosquitto, nullptr, device->getTopic().c_str(),
+                             0);
     if (rc != MOSQ_ERR_SUCCESS) {
-        LOG_ERROR("Failed to connect to MQTT server: {}", mosquitto_strerror(rc));
-        return false;
+      LOG_ERROR("Failed to subscribe to topic: {}", mosquitto_strerror(rc));
+      return false;
     }
-    LOG_DEBUG("Connected to MQTT server: {}", m_server);
-
-    // Subscribe to the topics of the registered devices
-    for (auto& device : m_registeredDevices) {
-        LOG_DEBUG("Subscribing to topic: {}", device->getTopic());
-        rc = mosquitto_subscribe(m_mosquitto, nullptr, device->getTopic().c_str(), 0);
-        if (rc != MOSQ_ERR_SUCCESS) {
-            LOG_ERROR("Failed to subscribe to topic: {}", mosquitto_strerror(rc));
-            return false;
-        }
-    }
-    return true;
+  }
+  return true;
 }
 
 // Disconnect from the MQTT server
 void MQTTConnector::disconnect() {
-    LOG_DEBUG("Disconnecting from MQTT server: {}", m_server);
-    mosquitto_disconnect(m_mosquitto);
+  LOG_DEBUG("Disconnecting from MQTT server: {}", m_server);
+  mosquitto_disconnect(m_mosquitto);
 }
 
 // Check if connected to the MQTT server
-bool MQTTConnector::isConnected() const {
-    return mosquitto_is_connected(m_mosquitto);
-}
+bool MQTTConnector::isConnected() const { return m_is_connected; }
 
 // Register a device to listen for its MQTT topics
 void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device) {
-    m_registeredDevices.push_back(device);
-    LOG_DEBUG("Device registered");
+  m_registered_devices.push_back(device);
+
+  // If connected, subscribe to the topic
+    if (m_is_connected) {
+        LOG_DEBUG("Subscribing to topic: {}", device->getTopic());
+        int rc = mosquitto_subscribe(m_mosquitto, nullptr, device->getTopic().c_str(),
+                                     0);
+        if (rc != MOSQ_ERR_SUCCESS) {
+        LOG_ERROR("Failed to subscribe to topic: {}", mosquitto_strerror(rc));
+        }
+    }
+  LOG_DEBUG("Device registered");
 }
 
 // Process incoming MQTT messages
-void MQTTConnector::processMessages() {
-    // TODO: Implement the message processing logic
-    LOG_DEBUG("Processing MQTT messages");
+void MQTTConnector::processMessages(int timeout) {
+  LOG_DEBUG("Processing MQTT messages");
+    int rc = mosquitto_loop(m_mosquitto, timeout, 1);
+    if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
+        LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
+    }
 }
 
-// Add any other necessary method implementations...
+// Callback for incoming MQTT messages, implementing the on_message
+void MQTTConnector::messageCallback(mosquitto *mosq, void *obj,
+                                    const mosquitto_message *message) {
+  LOG_DEBUG("Received MQTT message on topic: {}", message->topic);
+  MQTTConnector *connector = static_cast<MQTTConnector *>(obj);
+    // Convert the topic and message to a string
+    std::string topic(message->topic);
+    std::string payload(static_cast<char *>(message->payload),
+                        message->payloadlen);
+
+  for (auto &device : connector->m_registered_devices) {
+    // Check if the topic starts with the device's topic
+    if (std::string(message->topic).find(device->getTopic()) == 0) {
+      // Call the device's onMessage method
+      device->processMQTTMessage(topic, payload);
+    }
+  }
+}
+
+// Callback for successful connection to the MQTT server, implementing
+// on_connect
+void MQTTConnector::connectCallback(mosquitto *mosq, void *obj, int rc) {
+  LOG_DEBUG("Connected to MQTT server");
+  MQTTConnector *connector = static_cast<MQTTConnector *>(obj);
+  connector->m_is_connected = true;
+}
+
+// Callback for disconnection from the MQTT server, implementing
+// on_disconnect
+void MQTTConnector::disconnectCallback(mosquitto *mosq, void *obj, int rc) {
+  LOG_INFO("Disconnected from MQTT server");
+  MQTTConnector *connector = static_cast<MQTTConnector *>(obj);
+  connector->m_is_connected = false;
+}
+
+// Callback for successful subscription to an MQTT topic, implementing
+// on_subscribe
+void MQTTConnector::subscribeCallback(mosquitto *mosq, void *obj, int mid,
+                                      int qos_count, const int *granted_qos) {
+  LOG_DEBUG("Subscribed to MQTT topic");
+}
+
+// Callback for successful unsubscription to an MQTT topic, implementing
+// on_unsubscribe
+void MQTTConnector::unsubscribeCallback(mosquitto *mosq, void *obj, int mid) {
+  LOG_ERROR("Unsubscribed from MQTT topic");
+}
