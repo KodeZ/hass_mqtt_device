@@ -6,7 +6,15 @@
 
 #pragma once
 
+#include "hass_mqtt_device/core/mqtt_connector.h"
+#include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
+#include <vector>
+
+using json = nlohmann::json;
+
+class FunctionBase;
 
 /**
  * @brief Base class for all devices that can be registered with the
@@ -17,14 +25,15 @@
  * type.
  */
 
-class DeviceBase {
+class DeviceBase : public std::enable_shared_from_this<DeviceBase> {
 public:
   /**
    * @brief Construct a new DeviceBase object
    *
    * @param deviceName The name of the device
+   * @param unique_id The unique id of the device
    */
-  DeviceBase(const std::string &deviceName);
+  DeviceBase(const std::string &deviceName, const std::string &unique_id);
 
   /**
    * @brief Destroy the DeviceBase object
@@ -36,7 +45,7 @@ public:
    *
    * @return The MQTT topic for this device
    */
-  virtual std::string getTopic() const = 0;
+  std::string getId() const;
 
   /**
    * @brief Get the name of this device
@@ -46,14 +55,28 @@ public:
   std::string getName() const;
 
   /**
+   * @brief Get the MQTT topic to subscribe to for this device
+   *
+   * @return The MQTT topic for this device
+   */
+  std::vector<std::string> getSubscribeTopics() const;
+
+  /**
+   * @brief Add a function to this device
+   *
+   * @param function The function to add
+   */
+  void registerFunction(std::shared_ptr<FunctionBase> function);
+
+  /**
    * @brief Process an incoming MQTT message
    *
    * @param topic The topic of the incoming message. This will be concatenated
    * with the device name and base topic
    * @param payload The payload of the incoming message
    */
-  virtual void processMQTTMessage(const std::string &topic,
-                                  const std::string &payload) = 0;
+  void processMessage(const std::string &topic,
+                                  const std::string &payload);
 
   /**
    * @brief Publish an MQTT message
@@ -62,12 +85,44 @@ public:
    * device name and base topic
    * @param payload The payload to publish
    */
-  virtual void publishMessage(const std::string &topic,
-                              const std::string &payload) = 0;
+  void publishMessage(const std::string &topic,
+                                  const json &payload);
+
+  /**
+   * @brief Send the home assistant discovery message for this device
+   *
+   * @note This method should be called after the device has been registered
+   * with the MQTTConnector
+   */
+  void sendDiscovery();
+
+  /**
+   * @brief Send an update message for this device.
+   *
+   * Sends the state of all functions for this device.
+   *
+   * @note This method should be called after the device has been registered
+   * with the MQTTConnector
+   */
+  void sendUpdate();
+
+  /**
+   * @brief Send an update message for one function of this device.
+   *
+   * @param topic The topic of the function to send the update for
+   * @param value The value to send
+   */
+  void sendUpdate(const std::string &topic, const std::string &value);
 
 protected:
   std::string m_deviceName;
-  std::string m_baseTopic;
+  std::string m_unique_id;
+  std::vector<std::shared_ptr<FunctionBase>> m_functions;
+  std::weak_ptr<MQTTConnector> m_connector;
 
-  // Add any additional protected members or helper methods as needed
+private:
+  friend void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device);
+  void setParentConnector(std::weak_ptr<MQTTConnector> connector) {
+    m_connector = connector;
+  };
 };

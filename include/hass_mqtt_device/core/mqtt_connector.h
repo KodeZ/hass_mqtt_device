@@ -6,11 +6,12 @@
 
 #pragma once
 
-#include "device_base.h" // Assuming you have a base class for devices
-#include <memory>        // For std::shared_ptr
+#include <memory> // For std::shared_ptr
 #include <mosquitto.h>
 #include <string>
 #include <vector>
+
+class DeviceBase;
 
 /**
  * @brief Class for connecting to an MQTT server and registering devices to
@@ -20,7 +21,7 @@
  * thread
  */
 
-class MQTTConnector {
+class MQTTConnector : public std::enable_shared_from_this<MQTTConnector> {
 public:
   /**
    * @brief Construct a new MQTTConnector object
@@ -65,6 +66,14 @@ public:
    * @param timeout The timeout in milliseconds
    */
   void processMessages(int timeout);
+
+  /**
+   * @brief Send a message to the MQTT server
+   *
+   * @param topic The topic to publish to
+   * @param payload The payload to publish
+   */
+  void publishMessage(const std::string &topic, const std::string &payload);
 
 private:
   /**
