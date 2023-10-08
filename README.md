@@ -45,7 +45,10 @@ sudo make install
 
 ## Usage
 
-Provide a brief example of how to use the library in a C++ project.
+There are a few devices defined for comfort. See the devices folder. It is rather easy to make your own devices by inheriting from DeviceBase, then add functions from the functions folder, or create your own functions from FunctionBase.
+### Examples
+
+In the examples folder there are a few examples on how the library can be used.
 
 ## Contributing
 
@@ -53,4 +56,4 @@ If you'd like to contribute, please fork the repository and make changes as you'
 
 ## License
 
-Specify the license here, e.g., MIT, GPL, etc.
+See the LICENSE file, but in short it is MIT.

@@ -11,11 +11,12 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-OnOffLightFunction::OnOffLightFunction(const std::string &functionName,
-                                       std::function<void(bool)> setStateCallback)
+OnOffLightFunction::OnOffLightFunction(
+    const std::string &functionName, std::function<void(bool)> setStateCallback)
     : FunctionBase(functionName), m_setStateCallback(setStateCallback) {}
 
 void OnOffLightFunction::init() {
+  LOG_DEBUG("Initializing on/off light function {}", getName());
   auto parent = m_parentDevice.lock();
   if (!parent) {
     LOG_ERROR("Parent device is no longer available.");

@@ -6,6 +6,7 @@
 
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/devices/on_off_light.h"
+#include "hass_mqtt_device/logger/logger.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -25,6 +26,8 @@ void setStateCallback(bool state) {
 }
 
 int main() {
+  INIT_LOGGER_DEBUG();
+
   // Create a light device with the name "light" and the unique id grabbed from
   // /etc/machine-id
   std::string unique_id;
@@ -40,15 +43,17 @@ int main() {
   // Create the device
   auto light =
       std::make_shared<OnOffLightDevice>("light", unique_id, setStateCallback);
+  light->init();
 
-  MQTTConnector connector("10.1.1.21", 1883,
-                          "hass_mqtt_device_on_off_light_example", "password");
-  connector.registerDevice(light);
+  auto connector = std::make_shared<MQTTConnector>("10.1.1.21", 1883,
+                          "hass", "hemmeligpassord");
+  connector->registerDevice(light);
+  connector->connect();
 
   // Run the device
   while (1) {
     // Process messages from the MQTT server for 1 second
-    connector.processMessages(1000);
+    connector->processMessages(1000);
 
     // Every second, check if there is an update to the state of the light, and
     // if so, update the state

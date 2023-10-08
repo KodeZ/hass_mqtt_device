@@ -10,6 +10,9 @@
 #include <mosquitto.h>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 class DeviceBase;
 
@@ -74,7 +77,7 @@ public:
    * @param topic The topic to publish to
    * @param payload The payload to publish
    */
-  void publishMessage(const std::string &topic, const std::string &payload);
+  void publishMessage(const std::string &topic, const json &payload);
 
 private:
   /**

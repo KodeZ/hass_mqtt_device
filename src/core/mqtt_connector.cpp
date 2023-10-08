@@ -4,6 +4,14 @@
 
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
+#include <array>
+#include <chrono>
+#include <string>
+#include <thread>
+
+constexpr std::array<int, 8> backoff_ladder = {1000, 1000,  5000,  5000,
+                                               5000, 15000, 30000, 30000};
+int backoff_state = 0;
 
 // Constructor implementation
 MQTTConnector::MQTTConnector(const std::string &server, const int port,
@@ -27,6 +35,13 @@ bool MQTTConnector::connect() {
     return false;
   }
 
+  // Set the callbacks
+  mosquitto_connect_callback_set(m_mosquitto, connectCallback);
+  mosquitto_disconnect_callback_set(m_mosquitto, disconnectCallback);
+  mosquitto_subscribe_callback_set(m_mosquitto, subscribeCallback);
+  mosquitto_unsubscribe_callback_set(m_mosquitto, unsubscribeCallback);
+  mosquitto_message_callback_set(m_mosquitto, messageCallback);
+
   mosquitto_username_pw_set(m_mosquitto, m_username.c_str(),
                             m_password.c_str());
   int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), m_port, 60);
@@ -35,7 +50,8 @@ bool MQTTConnector::connect() {
     return false;
   }
   LOG_DEBUG("Connected to MQTT server: {}", m_server);
-
+  m_is_connected = true;
+ 
   return true;
 }
 
@@ -69,6 +85,33 @@ void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device) {
 
 // Process incoming MQTT messages
 void MQTTConnector::processMessages(int timeout) {
+  if (!isConnected()) {
+    LOG_DEBUG("Not connected to MQTT server. Attempting to reconnect.");
+    static int slept_for = 0;
+    LOG_DEBUG("Slept since last reconnect try {}ms", slept_for);
+    std::this_thread::sleep_for(std::chrono::milliseconds(timeout));
+    slept_for += timeout;
+    if (slept_for < backoff_ladder[backoff_state]) {
+      return;
+    } else {
+      slept_for = 0;
+      backoff_state++;
+      if (backoff_state >= backoff_ladder.size()) {
+        backoff_state = backoff_ladder.size() - 1;
+      }
+
+      bool rc = connect();
+      if (!rc) {
+        LOG_ERROR("Failed to reconnect to MQTT server: {}. Continuing to sleep "
+                  "and retry.",
+                  mosquitto_strerror(rc));
+        return;
+      }
+    }
+    backoff_state = 0;
+  }
+
+  // At this point, we are connected to the MQTT server
   LOG_DEBUG("Processing MQTT messages");
   int rc = mosquitto_loop(m_mosquitto, timeout, 1);
   if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
@@ -78,11 +121,12 @@ void MQTTConnector::processMessages(int timeout) {
 
 // Publish a message
 void MQTTConnector::publishMessage(const std::string &topic,
-                                   const std::string &payload) {
+                                   const json &payload) {
+  std::string payload_str = payload.dump();
   LOG_DEBUG("Publishing MQTT message to topic: {}", topic);
-  LOG_DEBUG("MQTT message payload: {}", payload);
-  int rc = mosquitto_publish(m_mosquitto, nullptr, topic.c_str(), payload.size(),
-                             payload.c_str(), 0, false);
+  LOG_DEBUG("MQTT message payload: {}", payload_str);
+  int rc = mosquitto_publish(m_mosquitto, nullptr, topic.c_str(),
+                             payload_str.size(), payload_str.c_str(), 0, false);
   if (rc != MOSQ_ERR_SUCCESS) {
     LOG_ERROR("Failed to publish MQTT message: {}", mosquitto_strerror(rc));
   }
@@ -110,7 +154,7 @@ void MQTTConnector::messageCallback(mosquitto *mosq, void *obj,
 // Callback for successful connection to the MQTT server, implementing
 // on_connect
 void MQTTConnector::connectCallback(mosquitto *mosq, void *obj, int rc) {
-  LOG_DEBUG("Connected to MQTT server");
+  LOG_DEBUG("Connected to MQTT server callback");
   MQTTConnector *connector = static_cast<MQTTConnector *>(obj);
 
   // Subscribe to the topics of the registered devices
@@ -125,6 +169,11 @@ void MQTTConnector::connectCallback(mosquitto *mosq, void *obj, int rc) {
       }
     }
   }
+
+  // Send the discovery messages for the registered devices
+    for (auto &device : connector->m_registered_devices) {
+        device->sendDiscovery();
+    }
 
   connector->m_is_connected = true;
 }

@@ -89,7 +89,7 @@ void DeviceBase::sendDiscovery() {
     LOG_DEBUG("Sending discovery message to topic: {}", discoveryPart.first);
     LOG_DEBUG("Discovery message: {}", discoveryPart.second.dump());
     try {
-      publishMessage(discoveryPart.first, discoveryPart.second.dump());
+      publishMessage(discoveryPart.first, discoveryPart.second);
     } catch (const std::exception &e) {
       LOG_ERROR("Failed to send discovery message for device {}-{}: {}",
                 getName(), getId(), e.what());
