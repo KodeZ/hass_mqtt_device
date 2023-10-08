@@ -75,6 +75,9 @@ void DeviceBase::sendDiscovery() {
       throw std::runtime_error("Duplicate discovery topic found for device");
     }
 
+    discoveryJson["availability_topic"] = "home/" + getId() + "/availability";
+    discoveryJson["availability_template"] = "{{ value_json.availability }}";
+
     // Add the device info to the discovery json
     discoveryJson["device"] = {{"name", m_deviceName},
                                {"identifiers", {m_unique_id}},
@@ -100,10 +103,11 @@ void DeviceBase::sendDiscovery() {
 
 void DeviceBase::processMessage(const std::string &topic,
                                 const std::string &payload) {
+  LOG_DEBUG("Processing message for device {} with topic {}", getName(), topic);
   // Loop through all functions and check if the topic matches
   for (auto &function : m_functions) {
     // Check if the topic starts with the function's topic
-    if (topic.find(function->getName()) == 0) {
+    if (topic.find(function->getName()) != std::string::npos) {
       // Call the function's onMessage method
       function->processMessage(topic, payload);
     }
@@ -128,4 +132,8 @@ void DeviceBase::sendStatus() {
   for (auto &function : m_functions) {
     function->sendStatus();
   }
+  // Send online message
+  json payload;
+  payload["availability"] = "online";
+  publishMessage("home/" + getId() + "/availability", payload);
 }

@@ -6,6 +6,7 @@
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 #include <array>
 #include <chrono>
+#include <mosquitto.h>
 #include <string>
 #include <thread>
 
@@ -51,7 +52,7 @@ bool MQTTConnector::connect() {
   }
   LOG_DEBUG("Connected to MQTT server: {}", m_server);
   m_is_connected = true;
- 
+
   return true;
 }
 
@@ -112,7 +113,6 @@ void MQTTConnector::processMessages(int timeout) {
   }
 
   // At this point, we are connected to the MQTT server
-  LOG_DEBUG("Processing MQTT messages");
   int rc = mosquitto_loop(m_mosquitto, timeout, 1);
   if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
     LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
@@ -143,9 +143,9 @@ void MQTTConnector::messageCallback(mosquitto *mosq, void *obj,
                       message->payloadlen);
 
   for (auto &device : connector->m_registered_devices) {
-    // Check if the topic starts with the device's topic
-    if (std::string(message->topic).find(device->getId()) == 0) {
-      // Call the device's onMessage method
+    // Check if the topic starts with the device's topic after home/
+    if (topic.find("home/" + device->getId()) == 0) {
+      // Call the device's processMessage method
       device->processMessage(topic, payload);
     }
   }
@@ -171,9 +171,14 @@ void MQTTConnector::connectCallback(mosquitto *mosq, void *obj, int rc) {
   }
 
   // Send the discovery messages for the registered devices
-    for (auto &device : connector->m_registered_devices) {
-        device->sendDiscovery();
-    }
+  for (auto &device : connector->m_registered_devices) {
+    device->sendDiscovery();
+  }
+
+  // Send status messages for all registered devices
+  for (auto &device : connector->m_registered_devices) {
+    device->sendStatus();
+  }
 
   connector->m_is_connected = true;
 }

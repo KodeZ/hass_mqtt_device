@@ -23,7 +23,7 @@ void OnOffLightFunction::init() {
     return;
   }
 
-  auto topic = "/home/" + parent->getId() + "/light/" + getName() + "/set";
+  auto topic = "home/" + parent->getId() + "/light/" + getName() + "/set";
   m_sub_topics[topic] = [this](const std::string &payload) {
     try {
       json payloadJson = json::parse(payload);
@@ -46,7 +46,7 @@ std::vector<std::string> OnOffLightFunction::getSubscribeTopics() const {
 
 std::string OnOffLightFunction::getDiscoveryTopic() const {
   auto parent = m_parentDevice.lock();
-  return "/homeassistant/light/" + parent->getId() + "/" + getName() +
+  return "homeassistant/light/" + parent->getId() + "/" + getName() +
          "/config";
 }
 
@@ -58,18 +58,13 @@ json OnOffLightFunction::getDiscoveryJson() const {
       parent->getId(); // We use the parent id to enable HA to merge the
                        // functions into one device
   discoveryJson["command_topic"] =
-      "/home/" + parent->getId() + "/light/" + getName() + "/set";
+      "home/" + parent->getId() + "/light/" + getName() + "/set";
   discoveryJson["state_topic"] =
-      "/home/" + parent->getId() + "/light/" + getName() + "/state";
+      "home/" + parent->getId() + "/light/" + getName() + "/state";
   discoveryJson["schema"] = "json";
   discoveryJson["state_value_template"] = "{{ value_json.state }}";
   discoveryJson["command_on_template"] = "{\"state\": \"ON\"}";
   discoveryJson["command_off_template"] = "{\"state\": \"OFF\"}";
-
-  // Availability (assuming the device sends "online" or "offline" to this
-  // topic)
-  discoveryJson["availability_topic"] =
-      "/home/" + parent->getId() + "/availability";
 
   return discoveryJson;
 }
@@ -77,6 +72,8 @@ json OnOffLightFunction::getDiscoveryJson() const {
 void OnOffLightFunction::processMessage(const std::string &topic,
                                         const std::string &payload) {
   // Check if the topic is in the map
+  LOG_DEBUG("Processing message for on/off light function {} with topic {}",
+            getName(), topic);
   if (m_sub_topics.find(topic) != m_sub_topics.end()) {
     // Call the function
     m_sub_topics[topic](payload);
@@ -93,7 +90,7 @@ void OnOffLightFunction::sendStatus() const {
   json payload;
   payload["state"] = m_state ? "ON" : "OFF";
   parent->publishMessage(
-      "/home/" + parent->getId() + "/light/" + getName() + "/state", payload);
+      "home/" + parent->getId() + "/light/" + getName() + "/state", payload);
 }
 
 void OnOffLightFunction::controlSetState(json state) {
