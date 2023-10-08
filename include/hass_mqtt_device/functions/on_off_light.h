@@ -8,8 +8,8 @@
 
 #include "hass_mqtt_device/core/device_base.h"
 #include "hass_mqtt_device/core/function_base.h"
-#include <memory>
 #include <functional>
+#include <memory>
 
 /**
  * @brief Class for an on/off only light device
@@ -25,17 +25,18 @@ public:
    * @param parentDevice Reference to the parent device
    * @param functionName The name of the function
    */
-  OnOffLightFunction(const std::string &functionName);
+  OnOffLightFunction(const std::string &functionName,
+                     std::function<void(bool)> setStateCallback);
 
   /**
    * @brief Destroy the OnOffLightFunction object
    */
   ~OnOffLightFunction() = default;
 
-    /**
-    * @brief Implement init function for this function
-    */
-    void init() override;
+  /**
+   * @brief Implement init function for this function
+   */
+  void init() override;
 
   /**
    * @brief Implements the subscribe topics function for this function
@@ -68,20 +69,33 @@ public:
                       const std::string &payload) override;
 
   /**
+   * @brief Implement sending status for all values
+   */
+  void sendStatus() const override;
+
+  /**
    * @brief Set the state of this function
    *
    * @param state The state to set
    */
-  void setState(json state);
+  void controlSetState(json state);
+
+  /**
+   * @brief Set the state of this function
+   *
+   * @param state The state to set
+   */
+  void setState(bool state);
 
   /**
    * @brief Get the state of this function
    *
    * @return The state of this function
    */
-  bool getState() const;
+  bool getState() const { return m_state; };
 
 protected:
   std::map<std::string, std::function<void(std::string)>> m_sub_topics;
   bool m_state;
+  std::function<void(bool)> m_setStateCallback;
 };

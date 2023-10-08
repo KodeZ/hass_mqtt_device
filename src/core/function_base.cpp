@@ -13,3 +13,5 @@
 
 FunctionBase::FunctionBase(const std::string &functionName)
     : m_functionName(functionName) {}
+
+std::string FunctionBase::getName() const { return m_functionName; }

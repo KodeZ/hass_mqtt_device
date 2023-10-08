@@ -6,10 +6,11 @@
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
 // Constructor implementation
-MQTTConnector::MQTTConnector(const std::string &server,
+MQTTConnector::MQTTConnector(const std::string &server, const int port,
                              const std::string &username,
                              const std::string &password)
-    : m_server(server), m_username(username), m_password(password) {
+    : m_server(server), m_port(port), m_username(username),
+      m_password(password) {
   LOG_DEBUG("MQTTConnector created with server: {}", server);
 
   // Initialize the MQTT library
@@ -25,9 +26,10 @@ bool MQTTConnector::connect() {
     LOG_ERROR("Failed to create mosquitto instance");
     return false;
   }
+
   mosquitto_username_pw_set(m_mosquitto, m_username.c_str(),
                             m_password.c_str());
-  int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), 1883, 60);
+  int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), m_port, 60);
   if (rc != MOSQ_ERR_SUCCESS) {
     LOG_ERROR("Failed to connect to MQTT server: {}", mosquitto_strerror(rc));
     return false;
@@ -71,6 +73,18 @@ void MQTTConnector::processMessages(int timeout) {
   int rc = mosquitto_loop(m_mosquitto, timeout, 1);
   if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
     LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
+  }
+}
+
+// Publish a message
+void MQTTConnector::publishMessage(const std::string &topic,
+                                   const std::string &payload) {
+  LOG_DEBUG("Publishing MQTT message to topic: {}", topic);
+  LOG_DEBUG("MQTT message payload: {}", payload);
+  int rc = mosquitto_publish(m_mosquitto, nullptr, topic.c_str(), payload.size(),
+                             payload.c_str(), 0, false);
+  if (rc != MOSQ_ERR_SUCCESS) {
+    LOG_ERROR("Failed to publish MQTT message: {}", mosquitto_strerror(rc));
   }
 }
 

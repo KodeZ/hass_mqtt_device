@@ -27,11 +27,12 @@ public:
    * @brief Construct a new MQTTConnector object
    *
    * @param server The MQTT server to connect to
+   * @param port The port to use when connecting to the MQTT server
    * @param username The username to use when connecting to the MQTT server
    * @param password The password to use when connecting to the MQTT server
    */
-  MQTTConnector(const std::string &server, const std::string &username,
-                const std::string &password);
+  MQTTConnector(const std::string &server, const int port,
+                const std::string &username, const std::string &password);
 
   /**
    * @brief Connect to the MQTT server
@@ -130,6 +131,7 @@ private:
   static void unsubscribeCallback(mosquitto *mosq, void *obj, int mid);
 
   std::string m_server;
+  int m_port;
   std::string m_username;
   std::string m_password;
   bool m_is_connected = false;

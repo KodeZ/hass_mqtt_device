@@ -83,6 +83,12 @@ public:
   virtual void processMessage(const std::string &topic,
                               const std::string &payload) = 0;
 
+  /**
+   * @brief Send update on the current state of all values in this function
+   *
+   */
+  virtual void sendStatus() const = 0;
+
 protected:
   std::string m_functionName;
   std::weak_ptr<DeviceBase> m_parentDevice;

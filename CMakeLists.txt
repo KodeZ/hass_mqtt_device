@@ -38,4 +38,4 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
 #add_subdirectory(tests)
 
 # For examples
-#add_subdirectory(examples)
+add_subdirectory(examples)

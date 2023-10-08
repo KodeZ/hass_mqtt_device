@@ -11,8 +11,9 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-OnOffLightFunction::OnOffLightFunction(const std::string &functionName)
-    : FunctionBase(functionName) {}
+OnOffLightFunction::OnOffLightFunction(const std::string &functionName,
+                                       std::function<void(bool)> setStateCallback)
+    : FunctionBase(functionName), m_setStateCallback(setStateCallback) {}
 
 void OnOffLightFunction::init() {
   auto parent = m_parentDevice.lock();
@@ -25,7 +26,7 @@ void OnOffLightFunction::init() {
   m_sub_topics[topic] = [this](const std::string &payload) {
     try {
       json payloadJson = json::parse(payload);
-      setState(payloadJson);
+      controlSetState(payloadJson);
     } catch (const json::exception &e) {
       LOG_ERROR("JSON error in payload for on/off light: {}. Error: {}",
                 payload, e.what());
@@ -81,13 +82,31 @@ void OnOffLightFunction::processMessage(const std::string &topic,
   }
 }
 
-void OnOffLightFunction::setState(json state) {
+void OnOffLightFunction::sendStatus() const {
+  auto parent = m_parentDevice.lock();
+  if (!parent) {
+    LOG_ERROR("Parent device is no longer available.");
+    return;
+  }
+
+  json payload;
+  payload["state"] = m_state ? "ON" : "OFF";
+  parent->publishMessage(
+      "/home/" + parent->getId() + "/light/" + getName() + "/state", payload);
+}
+
+void OnOffLightFunction::controlSetState(json state) {
   if (state["state"] == "ON") {
-    this->setState(true);
+    m_setStateCallback(true);
   } else if (state["state"] == "OFF") {
-    this->setState(false);
+    m_setStateCallback(false);
   } else {
     LOG_ERROR("Unexpected state value in payload for on/off light: {}",
               state.dump());
   }
+}
+
+void OnOffLightFunction::setState(bool state) {
+  m_state = state;
+  sendStatus();
 }

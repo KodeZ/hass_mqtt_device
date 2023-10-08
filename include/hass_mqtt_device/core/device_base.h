@@ -69,14 +69,21 @@ public:
   void registerFunction(std::shared_ptr<FunctionBase> function);
 
   /**
+   * @brief Find a function by name
+   *
+   * @param name The name of the function to find
+   * @return A shared pointer to the function if found, nullptr otherwise
+   */
+  std::shared_ptr<FunctionBase> findFunction(const std::string &name) const;
+
+  /**
    * @brief Process an incoming MQTT message
    *
    * @param topic The topic of the incoming message. This will be concatenated
    * with the device name and base topic
    * @param payload The payload of the incoming message
    */
-  void processMessage(const std::string &topic,
-                                  const std::string &payload);
+  void processMessage(const std::string &topic, const std::string &payload);
 
   /**
    * @brief Publish an MQTT message
@@ -85,8 +92,7 @@ public:
    * device name and base topic
    * @param payload The payload to publish
    */
-  void publishMessage(const std::string &topic,
-                                  const json &payload);
+  void publishMessage(const std::string &topic, const json &payload);
 
   /**
    * @brief Send the home assistant discovery message for this device
@@ -104,15 +110,7 @@ public:
    * @note This method should be called after the device has been registered
    * with the MQTTConnector
    */
-  void sendUpdate();
-
-  /**
-   * @brief Send an update message for one function of this device.
-   *
-   * @param topic The topic of the function to send the update for
-   * @param value The value to send
-   */
-  void sendUpdate(const std::string &topic, const std::string &value);
+  void sendStatus();
 
 protected:
   std::string m_deviceName;

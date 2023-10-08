@@ -7,6 +7,7 @@
 #include "hass_mqtt_device/devices/on_off_light.h"
 #include "hass_mqtt_device/core/function_base.h"
 #include "hass_mqtt_device/functions/on_off_light.h"
+#include <functional>
 #include <memory>
 
 /**
@@ -16,10 +17,18 @@
  */
 
 OnOffLightDevice::OnOffLightDevice(const std::string &deviceName,
-                                   const std::string &unique_id)
+                                   const std::string &unique_id,
+                                   std::function<void(bool)> setStateCallback)
     : DeviceBase(deviceName, unique_id) {
   std::shared_ptr<OnOffLightFunction> on_off_light =
-      std::make_shared<OnOffLightFunction>("on_off_light");
+      std::make_shared<OnOffLightFunction>("on_off_light", setStateCallback);
   std::shared_ptr<FunctionBase> on_off_light_base = on_off_light;
   registerFunction(on_off_light_base);
+}
+
+void OnOffLightDevice::setState(bool state) {
+  std::shared_ptr<OnOffLightFunction> on_off_light =
+      std::dynamic_pointer_cast<OnOffLightFunction>(
+          findFunction("on_off_light"));
+  on_off_light->setState(state);
 }
