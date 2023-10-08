@@ -46,8 +46,7 @@ std::vector<std::string> OnOffLightFunction::getSubscribeTopics() const {
 
 std::string OnOffLightFunction::getDiscoveryTopic() const {
   auto parent = m_parentDevice.lock();
-  return "homeassistant/light/" + parent->getId() + "/" + getName() +
-         "/config";
+  return "homeassistant/light/" + parent->getId() + "/" + getName() + "/config";
 }
 
 json OnOffLightFunction::getDiscoveryJson() const {

@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/examples/simple_on_off_light/simple_on_off_light",
-            "args": [],
+            "args": ["10.1.1.21", "1883", "hass", "hemmeligpassord"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

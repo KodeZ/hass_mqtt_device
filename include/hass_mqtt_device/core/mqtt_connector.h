@@ -79,6 +79,14 @@ public:
    */
   void publishMessage(const std::string &topic, const json &payload);
 
+  /**
+   * @brief Send a last will and testament message to the MQTT server
+   *
+   * @param topic The topic to publish to
+   * @param payload The payload to publish
+   */
+  void publishLWT(const std::string &topic, const json &payload);
+
 private:
   /**
    * @brief Callback for incoming MQTT messages, implementing the on_message

@@ -112,6 +112,14 @@ public:
    */
   void sendStatus();
 
+  /**
+   * @brief Send the home assistant will message for this device
+   *
+   * @note This method should be called after the device has been registered
+   * with the MQTTConnector
+   */
+  void sendLWT();
+
 protected:
   std::string m_deviceName;
   std::string m_unique_id;

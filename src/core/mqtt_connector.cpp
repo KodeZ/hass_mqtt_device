@@ -36,6 +36,10 @@ bool MQTTConnector::connect() {
     return false;
   }
 
+  // Set the username and password
+  mosquitto_username_pw_set(m_mosquitto, m_username.c_str(),
+                            m_password.c_str());
+
   // Set the callbacks
   mosquitto_connect_callback_set(m_mosquitto, connectCallback);
   mosquitto_disconnect_callback_set(m_mosquitto, disconnectCallback);
@@ -43,8 +47,11 @@ bool MQTTConnector::connect() {
   mosquitto_unsubscribe_callback_set(m_mosquitto, unsubscribeCallback);
   mosquitto_message_callback_set(m_mosquitto, messageCallback);
 
-  mosquitto_username_pw_set(m_mosquitto, m_username.c_str(),
-                            m_password.c_str());
+  // Set the lwt for all devices
+  for (auto &device : m_registered_devices) {
+    device->sendLWT();
+  }
+
   int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), m_port, 60);
   if (rc != MOSQ_ERR_SUCCESS) {
     LOG_ERROR("Failed to connect to MQTT server: {}", mosquitto_strerror(rc));
@@ -72,14 +79,8 @@ void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device) {
 
   // If connected, subscribe to the topic
   if (m_is_connected) {
-    for (auto &topic : device->getSubscribeTopics()) {
-      LOG_DEBUG("Subscribing to topic: {}", topic);
-      int rc = mosquitto_subscribe(m_mosquitto, nullptr, topic.c_str(), 0);
-      if (rc != MOSQ_ERR_SUCCESS) {
-        LOG_ERROR("Failed to subscribe to topic: {}", mosquitto_strerror(rc));
-        return;
-      }
-    }
+    disconnect();
+    connect();
   }
   LOG_DEBUG("Device registered");
 }
@@ -126,7 +127,19 @@ void MQTTConnector::publishMessage(const std::string &topic,
   LOG_DEBUG("Publishing MQTT message to topic: {}", topic);
   LOG_DEBUG("MQTT message payload: {}", payload_str);
   int rc = mosquitto_publish(m_mosquitto, nullptr, topic.c_str(),
-                             payload_str.size(), payload_str.c_str(), 0, false);
+                             payload_str.size(), payload_str.c_str(), 1, true);
+  if (rc != MOSQ_ERR_SUCCESS) {
+    LOG_ERROR("Failed to publish MQTT message: {}", mosquitto_strerror(rc));
+  }
+}
+
+// publish last will and testament
+void MQTTConnector::publishLWT(const std::string &topic, const json &payload) {
+  std::string payload_str = payload.dump();
+  LOG_DEBUG("Publishing LWT MQTT message to topic: {}", topic);
+  LOG_DEBUG("LWT MQTT message payload: {}", payload_str);
+  int rc = mosquitto_will_set(m_mosquitto, topic.c_str(), payload_str.size(),
+                              payload_str.c_str(), 1, true);
   if (rc != MOSQ_ERR_SUCCESS) {
     LOG_ERROR("Failed to publish MQTT message: {}", mosquitto_strerror(rc));
   }
@@ -173,10 +186,6 @@ void MQTTConnector::connectCallback(mosquitto *mosq, void *obj, int rc) {
   // Send the discovery messages for the registered devices
   for (auto &device : connector->m_registered_devices) {
     device->sendDiscovery();
-  }
-
-  // Send status messages for all registered devices
-  for (auto &device : connector->m_registered_devices) {
     device->sendStatus();
   }
 

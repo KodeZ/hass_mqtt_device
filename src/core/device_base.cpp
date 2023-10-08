@@ -101,6 +101,23 @@ void DeviceBase::sendDiscovery() {
   }
 }
 
+void DeviceBase::sendLWT() {
+  // Create the will message
+  json payload;
+  payload["availability"] = "offline";
+  // Publish the will message
+  // Check if the connector is still alive
+  if (auto connector = m_connector.lock()) {
+    // Publish the message
+    connector->publishLWT("home/" + getId() + "/availability", payload);
+  } else {
+    LOG_ERROR(
+        "Failed to publish MQTT message: MQTTConnector is no longer alive");
+    throw std::runtime_error(
+        "Failed to publish MQTT message: MQTTConnector is no longer alive");
+  }
+}
+
 void DeviceBase::processMessage(const std::string &topic,
                                 const std::string &payload) {
   LOG_DEBUG("Processing message for device {} with topic {}", getName(), topic);
