@@ -55,6 +55,15 @@ public:
   std::string getName() const;
 
   /**
+   * @brief Get the id_name of this device
+   *
+   * Used for the MQTT topic by the functions of this device
+   *
+   * @return The name of this device
+   */
+  std::string getFullId() const;
+
+  /**
    * @brief Get the MQTT topic to subscribe to for this device
    *
    * @return The MQTT topic for this device

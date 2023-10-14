@@ -18,6 +18,9 @@ DeviceBase::DeviceBase(const std::string &deviceName,
 std::string DeviceBase::getId() const { return m_unique_id; }
 
 std::string DeviceBase::getName() const { return m_deviceName; }
+std::string DeviceBase::getFullId() const {
+  return m_unique_id + "_" + m_deviceName;
+}
 
 std::vector<std::string> DeviceBase::getSubscribeTopics() const {
   // Loop through all functions and get their topics

@@ -8,9 +8,9 @@
 
 #include <memory> // For std::shared_ptr
 #include <mosquitto.h>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -60,6 +60,20 @@ public:
    * @param device The device to register
    */
   void registerDevice(std::shared_ptr<DeviceBase> device);
+
+  /**
+   * @brief Unregister a device to stop listening for its MQTT topics
+   *
+   * @param device_name The device to unregister
+   */
+  void unregisterDevice(const std::string &device_name);
+
+  /**
+   * @brief Get a device by name
+   *
+   * @param device_name The name of the device to get
+   */
+  std::shared_ptr<DeviceBase> getDevice(const std::string &device_name) const;
 
   /**
    * @brief Process incoming MQTT messages. Needs to be called regularly with a

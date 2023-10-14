@@ -18,16 +18,19 @@
 #include <iostream>
 #include <memory>
 
-bool _state = false;
-bool _state_updated = true;
+// Default values
+const std::string _device_name_prefix = "simple_on_off_light_multiple_example_";
+const int _device_count = 5;
+bool _state[_device_count];
+bool _state_updated[_device_count];
 
-void setStateCallback(bool state) {
-  if (state != _state) {
-    _state = state;
-    _state_updated = true;
-    LOG_INFO("State changed to {}", state);
+void setStateCallback(int device, bool state) {
+  if (state != _state[device]) {
+    _state[device] = state;
+    _state_updated[device] = true;
+    LOG_INFO("State for {} changed to {}", device, state);
   } else {
-    LOG_INFO("State already set to {}", state);
+    LOG_INFO("State for {} already set to {}", device, state);
   }
 }
 
@@ -47,6 +50,12 @@ int main(int argc, char *argv[]) {
   std::string username = argv[3];
   std::string password = argv[4];
 
+  // Set state and updated to false
+  for (int i = 0; i < _device_count; i++) {
+    _state[i] = false;
+    _state_updated[i] = false;
+  }
+
   // Create a light device with the name "light" and the unique id grabbed from
   // /etc/machine-id
   std::string unique_id;
@@ -58,16 +67,24 @@ int main(int argc, char *argv[]) {
     std::cout << "Could not open /etc/machine-id" << std::endl;
     return 1;
   }
-  unique_id += "_simple_on_off_light";
+  unique_id += "_simple_on_off_light_multiple";
 
-  // Create the device
-  auto light =
-      std::make_shared<OnOffLightDevice>("simple_on_off_light_example", unique_id, setStateCallback);
-  light->init();
-
+  // Create the connector
   auto connector =
       std::make_shared<MQTTConnector>(ip, port, username, password);
-  connector->registerDevice(light);
+
+  // Create the devices
+  for (int i = 0; i < _device_count; i++) {
+    std::string device_name = _device_name_prefix + std::to_string(i);
+    // By using lambda and capturing the value of i, we can create multiple
+    // devices with different callbacks in a loop
+    auto light = std::make_shared<OnOffLightDevice>(
+        device_name, unique_id,
+        [i](bool state) { setStateCallback(i, state); });
+    light->init();
+    connector->registerDevice(light);
+  }
+
   connector->connect();
 
   // Run the device
@@ -78,16 +95,28 @@ int main(int argc, char *argv[]) {
 
     // Every 10 seconds, change the state of the light
     if (loop_count % 10 == 0) {
-      _state = !_state;
-      _state_updated = true;
+      for (int i = 0; i < _device_count; i++) {
+        _state[i] = !_state[i];
+        _state_updated[i] = true;
+      }
     }
     loop_count++;
 
     // Every second, check if there is an update to the state of the light, and
     // if so, update the state
-    if (_state_updated) {
-      light->setState(_state);
-      _state_updated = false;
+    for (int i = 0; i < _device_count; i++) {
+      if (_state_updated[i]) {
+        LOG_INFO("Updating state for {}", i);
+        auto light = std::dynamic_pointer_cast<OnOffLightDevice>(
+            connector->getDevice(_device_name_prefix + std::to_string(i)));
+        if (light) {
+
+          light->setState(_state[i]);
+          _state_updated[i] = false;
+        } else {
+          LOG_ERROR("Could not find device {}", i);
+        }
+      }
     }
   }
 }

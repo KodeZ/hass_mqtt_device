@@ -23,7 +23,7 @@ void OnOffLightFunction::init() {
     return;
   }
 
-  auto topic = "home/" + parent->getId() + "/light/" + getName() + "/set";
+  auto topic = "home/" + parent->getFullId() + "/light/" + getName() + "/set";
   m_sub_topics[topic] = [this](const std::string &payload) {
     try {
       json payloadJson = json::parse(payload);
@@ -46,7 +46,7 @@ std::vector<std::string> OnOffLightFunction::getSubscribeTopics() const {
 
 std::string OnOffLightFunction::getDiscoveryTopic() const {
   auto parent = m_parentDevice.lock();
-  return "homeassistant/light/" + parent->getId() + "/" + getName() + "/config";
+  return "homeassistant/light/" + parent->getFullId() + "/" + getName() + "/config";
 }
 
 json OnOffLightFunction::getDiscoveryJson() const {
@@ -54,12 +54,12 @@ json OnOffLightFunction::getDiscoveryJson() const {
   json discoveryJson;
   discoveryJson["name"] = parent->getName() + " " + getName();
   discoveryJson["unique_id"] =
-      parent->getId(); // We use the parent id to enable HA to merge the
-                       // functions into one device
+      parent->getFullId(); // We use the parent id to enable HA to merge the
+                           // functions into one device
   discoveryJson["command_topic"] =
-      "home/" + parent->getId() + "/light/" + getName() + "/set";
+      "home/" + parent->getFullId() + "/light/" + getName() + "/set";
   discoveryJson["state_topic"] =
-      "home/" + parent->getId() + "/light/" + getName() + "/state";
+      "home/" + parent->getFullId() + "/light/" + getName() + "/state";
   discoveryJson["schema"] = "json";
   discoveryJson["state_value_template"] = "{{ value_json.state }}";
   discoveryJson["command_on_template"] = "{\"state\": \"ON\"}";
@@ -89,7 +89,7 @@ void OnOffLightFunction::sendStatus() const {
   json payload;
   payload["state"] = m_state ? "ON" : "OFF";
   parent->publishMessage(
-      "home/" + parent->getId() + "/light/" + getName() + "/state", payload);
+      "home/" + parent->getFullId() + "/light/" + getName() + "/state", payload);
 }
 
 void OnOffLightFunction::controlSetState(json state) {

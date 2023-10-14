@@ -74,6 +74,17 @@ bool MQTTConnector::isConnected() const { return m_is_connected; }
 
 // Register a device to listen for its MQTT topics
 void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device) {
+  // Make sure the device is not already registered. Same Id is fine, but same
+  // name and id is not
+  for (auto &registered_device : m_registered_devices) {
+    if (registered_device->getName() == device->getName() &&
+        registered_device->getId() == device->getId()) {
+      LOG_ERROR("Device with id {} and name {} already registered",
+                device->getId(), device->getName());
+      throw std::runtime_error("Device with name already registered");
+    }
+  }
+
   device->setParentConnector(shared_from_this());
   m_registered_devices.push_back(device);
 
@@ -83,6 +94,28 @@ void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device) {
     connect();
   }
   LOG_DEBUG("Device registered");
+}
+
+// Unregister a device
+void MQTTConnector::unregisterDevice(const std::string &device_name) {
+  for (auto it = m_registered_devices.begin(); it != m_registered_devices.end();
+       it++) {
+    if ((*it)->getId() == device_name) {
+      m_registered_devices.erase(it);
+      break;
+    }
+  }
+}
+
+// Get a device by name
+std::shared_ptr<DeviceBase>
+MQTTConnector::getDevice(const std::string &device_name) const {
+  for (auto &device : m_registered_devices) {
+    if (device->getName() == device_name) {
+      return device;
+    }
+  }
+  return nullptr;
 }
 
 // Process incoming MQTT messages
@@ -114,9 +147,24 @@ void MQTTConnector::processMessages(int timeout) {
   }
 
   // At this point, we are connected to the MQTT server
-  int rc = mosquitto_loop(m_mosquitto, timeout, 1);
-  if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
-    LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
+  // Get the monotonic time when we should be done processing messages
+  // Get the monotonic time when we should be done processing messages
+  auto done =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
+
+  while (true) {
+    auto now = std::chrono::steady_clock::now();
+    if (now >= done) {
+      break;
+    }
+
+    // How much time left till done
+    auto remaining =
+        std::chrono::duration_cast<std::chrono::milliseconds>(done - now);
+    int rc = mosquitto_loop(m_mosquitto, remaining.count(), 1);
+    if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
+      LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
+    }
   }
 }
 

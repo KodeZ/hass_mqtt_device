@@ -7,6 +7,7 @@
 #include "hass_mqtt_device/devices/on_off_light.h"
 #include "hass_mqtt_device/core/function_base.h"
 #include "hass_mqtt_device/functions/on_off_light.h"
+#include "hass_mqtt_device/logger/logger.hpp"
 #include <functional>
 #include <memory>
 
@@ -33,5 +34,12 @@ void OnOffLightDevice::setState(bool state) {
   std::shared_ptr<OnOffLightFunction> on_off_light =
       std::dynamic_pointer_cast<OnOffLightFunction>(
           findFunction("on_off_light"));
+  if(on_off_light)
+  {
   on_off_light->setState(state);
+  }
+  else
+  {
+    LOG_ERROR("Could not find on_off_light function");
+  }
 }
