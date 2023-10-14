@@ -26,7 +26,7 @@ public:
    * @param functionName The name of the function
    */
   OnOffLightFunction(const std::string &functionName,
-                     std::function<void(bool)> setStateCallback);
+                     std::function<void(bool)> control_state_cb);
 
   /**
    * @brief Destroy the OnOffLightFunction object
@@ -78,13 +78,6 @@ public:
    *
    * @param state The state to set
    */
-  void controlSetState(json state);
-
-  /**
-   * @brief Set the state of this function
-   *
-   * @param state The state to set
-   */
   void setState(bool state);
 
   /**
@@ -94,8 +87,16 @@ public:
    */
   bool getState() const { return m_state; };
 
+private:
+  /**
+   * @brief Receives the control message to set the state of this function
+   *
+   * @param state The state to set
+   */
+  void controlState(json state);
+
 protected:
   std::map<std::string, std::function<void(std::string)>> m_sub_topics;
   bool m_state;
-  std::function<void(bool)> m_setStateCallback;
+  std::function<void(bool)> m_control_state_cb;
 };

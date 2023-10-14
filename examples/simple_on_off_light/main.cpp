@@ -21,7 +21,7 @@
 bool _state = false;
 bool _state_updated = true;
 
-void setStateCallback(bool state) {
+void controlStateCallback(bool state) {
   if (state != _state) {
     _state = state;
     _state_updated = true;
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 
   // Create the device
   auto light =
-      std::make_shared<OnOffLightDevice>("simple_on_off_light_example", unique_id, setStateCallback);
+      std::make_shared<OnOffLightDevice>("simple_on_off_light_example", unique_id, controlStateCallback);
   light->init();
 
   auto connector =

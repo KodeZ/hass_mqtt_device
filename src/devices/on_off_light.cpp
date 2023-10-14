@@ -17,15 +17,15 @@
  * Derived from DeviceBase
  */
 
-OnOffLightDevice::OnOffLightDevice(const std::string &deviceName,
+OnOffLightDevice::OnOffLightDevice(const std::string &device_name,
                                    const std::string &unique_id,
-                                   std::function<void(bool)> setStateCallback)
-    : DeviceBase(deviceName, unique_id),
-      m_set_state_callback(setStateCallback) {}
+                                   std::function<void(bool)> control_state_cb)
+    : DeviceBase(device_name, unique_id),
+      m_control_state_cb(control_state_cb) {}
 
 void OnOffLightDevice::init() {
   std::shared_ptr<OnOffLightFunction> on_off_light =
-      std::make_shared<OnOffLightFunction>("on_off_light", m_set_state_callback);
+      std::make_shared<OnOffLightFunction>("on_off_light", m_control_state_cb);
   std::shared_ptr<FunctionBase> on_off_light_base = on_off_light;
   registerFunction(on_off_light_base);
 }

@@ -11,15 +11,15 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-DeviceBase::DeviceBase(const std::string &deviceName,
+DeviceBase::DeviceBase(const std::string &device_name,
                        const std::string &unique_id)
-    : m_deviceName(deviceName), m_unique_id(unique_id) {}
+    : m_device_name(device_name), m_unique_id(unique_id) {}
 
 std::string DeviceBase::getId() const { return m_unique_id; }
 
-std::string DeviceBase::getName() const { return m_deviceName; }
+std::string DeviceBase::getName() const { return m_device_name; }
 std::string DeviceBase::getFullId() const {
-  return m_unique_id + "_" + m_deviceName;
+  return m_unique_id + "_" + m_device_name;
 }
 
 std::vector<std::string> DeviceBase::getSubscribeTopics() const {
@@ -33,7 +33,7 @@ std::vector<std::string> DeviceBase::getSubscribeTopics() const {
   std::sort(topics.begin(), topics.end());
   auto last = std::unique(topics.begin(), topics.end());
   if (last != topics.end()) {
-    LOG_ERROR("Duplicate topics found for device {}", m_deviceName);
+    LOG_ERROR("Duplicate topics found for device {}", m_device_name);
     throw std::runtime_error("Duplicate topics found for device");
   }
   return topics;
@@ -42,8 +42,8 @@ std::vector<std::string> DeviceBase::getSubscribeTopics() const {
 void DeviceBase::registerFunction(std::shared_ptr<FunctionBase> function) {
   // Check if the function wit the same discovery topic already exists
   for (auto &existingFunction : m_functions) {
-    if (existingFunction->getDiscoveryTopic() ==
-        function->getDiscoveryTopic()) {
+    if (existingFunction->getName() ==
+        function->getName()) {
       LOG_ERROR("Function with discovery topic {} already exists",
                 function->getDiscoveryTopic());
       throw std::runtime_error("Function with discovery topic already exists");
@@ -74,7 +74,7 @@ void DeviceBase::sendDiscovery() {
     // Check if the discovery topic already exists, throw an error if it does
     if (discoveryParts.find(discoveryTopic) != discoveryParts.end()) {
       LOG_ERROR("Duplicate discovery topic {} found for device {}",
-                discoveryTopic, m_deviceName);
+                discoveryTopic, m_device_name);
       throw std::runtime_error("Duplicate discovery topic found for device");
     }
 
@@ -82,7 +82,7 @@ void DeviceBase::sendDiscovery() {
     discoveryJson["availability_template"] = "{{ value_json.availability }}";
 
     // Add the device info to the discovery json
-    discoveryJson["device"] = {{"name", m_deviceName},
+    discoveryJson["device"] = {{"name", m_device_name},
                                {"identifiers", {m_unique_id}},
                                {"manufacturer", "Homebrew"},
                                {"model", "hass_mqtt_device"},

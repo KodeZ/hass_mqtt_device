@@ -12,8 +12,8 @@
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
 OnOffLightFunction::OnOffLightFunction(
-    const std::string &functionName, std::function<void(bool)> setStateCallback)
-    : FunctionBase(functionName), m_setStateCallback(setStateCallback) {}
+    const std::string &functionName, std::function<void(bool)> control_state_cb)
+    : FunctionBase(functionName), m_control_state_cb(control_state_cb) {}
 
 void OnOffLightFunction::init() {
   LOG_DEBUG("Initializing on/off light function {}", getName());
@@ -27,7 +27,7 @@ void OnOffLightFunction::init() {
   m_sub_topics[topic] = [this](const std::string &payload) {
     try {
       json payloadJson = json::parse(payload);
-      controlSetState(payloadJson);
+      controlState(payloadJson);
     } catch (const json::exception &e) {
       LOG_ERROR("JSON error in payload for on/off light: {}. Error: {}",
                 payload, e.what());
@@ -46,7 +46,12 @@ std::vector<std::string> OnOffLightFunction::getSubscribeTopics() const {
 
 std::string OnOffLightFunction::getDiscoveryTopic() const {
   auto parent = m_parentDevice.lock();
-  return "homeassistant/light/" + parent->getFullId() + "/" + getName() + "/config";
+  if (!parent) {
+    LOG_ERROR("Parent device is not available.");
+    return "";
+  }
+  return "homeassistant/light/" + parent->getFullId() + "/" + getName() +
+         "/config";
 }
 
 json OnOffLightFunction::getDiscoveryJson() const {
@@ -54,7 +59,7 @@ json OnOffLightFunction::getDiscoveryJson() const {
   json discoveryJson;
   discoveryJson["name"] = parent->getName() + " " + getName();
   discoveryJson["unique_id"] =
-      parent->getFullId(); // We use the parent id to enable HA to merge the
+      parent->getFullId() + "_" + getName(); // We use the parent id to enable HA to merge the
                            // functions into one device
   discoveryJson["command_topic"] =
       "home/" + parent->getFullId() + "/light/" + getName() + "/set";
@@ -88,15 +93,16 @@ void OnOffLightFunction::sendStatus() const {
 
   json payload;
   payload["state"] = m_state ? "ON" : "OFF";
-  parent->publishMessage(
-      "home/" + parent->getFullId() + "/light/" + getName() + "/state", payload);
+  parent->publishMessage("home/" + parent->getFullId() + "/light/" + getName() +
+                             "/state",
+                         payload);
 }
 
-void OnOffLightFunction::controlSetState(json state) {
+void OnOffLightFunction::controlState(json state) {
   if (state["state"] == "ON") {
-    m_setStateCallback(true);
+    m_control_state_cb(true);
   } else if (state["state"] == "OFF") {
-    m_setStateCallback(false);
+    m_control_state_cb(false);
   } else {
     LOG_ERROR("Unexpected state value in payload for on/off light: {}",
               state.dump());

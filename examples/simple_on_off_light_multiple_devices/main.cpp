@@ -5,10 +5,16 @@
  */
 
 /**
- * This example shows how to create a simple on/off light device. It fakes
- * changing the state of the light every 10 seconds. It will also respond to
- * control messages from the MQTT server, and respond with the current new
- * state. The device should be automatically discovered by Home Assistant.
+ * This example shows how to create a simple on/off light device by creating
+ * multiple devices with one function each.
+ * I do not think this is the best way to do it, but it is possible. The
+ * "correct" way would be to create one device with multiple functions attached
+ * to it. See examples/simple_on_off_light_multiple_functions for an example of
+ * that.
+ * This example fakes changing the state of the light every 10 seconds. It will
+ * also respond to control messages from the MQTT server, and respond with the
+ * current new state. The device should be automatically discovered by Home
+ * Assistant.
  */
 
 #include "hass_mqtt_device/core/mqtt_connector.h"
@@ -19,12 +25,13 @@
 #include <memory>
 
 // Default values
-const std::string _device_name_prefix = "simple_on_off_light_multiple_example_";
+const std::string _device_name_prefix =
+    "simple_on_off_light_multiple_devices_example_";
 const int _device_count = 5;
 bool _state[_device_count];
 bool _state_updated[_device_count];
 
-void setStateCallback(int device, bool state) {
+void controlStateCallback(int device, bool state) {
   if (state != _state[device]) {
     _state[device] = state;
     _state_updated[device] = true;
@@ -56,8 +63,7 @@ int main(int argc, char *argv[]) {
     _state_updated[i] = false;
   }
 
-  // Create a light device with the name "light" and the unique id grabbed from
-  // /etc/machine-id
+  // Get the Unique ID from /etc/machine-id
   std::string unique_id;
   std::ifstream machine_id_file("/etc/machine-id");
   if (machine_id_file.good()) {
@@ -67,7 +73,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Could not open /etc/machine-id" << std::endl;
     return 1;
   }
-  unique_id += "_simple_on_off_light_multiple";
+  unique_id += "_simple_on_off_light_multiple_devices";
 
   // Create the connector
   auto connector =
@@ -80,7 +86,7 @@ int main(int argc, char *argv[]) {
     // devices with different callbacks in a loop
     auto light = std::make_shared<OnOffLightDevice>(
         device_name, unique_id,
-        [i](bool state) { setStateCallback(i, state); });
+        [i](bool state) { controlStateCallback(i, state); });
     light->init();
     connector->registerDevice(light);
   }

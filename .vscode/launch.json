@@ -6,13 +6,18 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/examples/simple_on_off_light/simple_on_off_light",
-            "args": ["10.1.1.21", "1883", "hass", "hemmeligpassord"],
+            "args": [
+                "10.1.1.21",
+                "1883",
+                "hass",
+                "hemmeligpassord"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "sourceFileMap":{
+            "sourceFileMap": {
                 "": "<target-path>"
             },
             "setupCommands": [
@@ -45,17 +50,70 @@
             }
         },
         {
-            "name": "Debug simple_on_off_light_multiple",
+            "name": "Debug simple_on_off_light_multiple_devices",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/simple_on_off_light_multiple/simple_on_off_light_multiple",
-            "args": ["10.1.1.21", "1883", "hass", "hemmeligpassord"],
+            "program": "${workspaceFolder}/build/examples/simple_on_off_light_multiple_devices/simple_on_off_light_multiple_devices",
+            "args": [
+                "10.1.1.21",
+                "1883",
+                "hass",
+                "hemmeligpassord"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "sourceFileMap":{
+            "sourceFileMap": {
+                "": "<target-path>"
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerArgs": "",
+            "logging": {
+                "trace": false,
+                "traceResponse": false,
+                "engineLogging": false,
+                "programOutput": false,
+                "exceptions": false
+            },
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb",
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Debug simple_on_off_light_multiple_functions",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/examples/simple_on_off_light_multiple_functions/simple_on_off_light_multiple_functions",
+            "args": [
+                "10.1.1.21",
+                "1883",
+                "hass",
+                "hemmeligpassord"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "sourceFileMap": {
                 "": "<target-path>"
             },
             "setupCommands": [

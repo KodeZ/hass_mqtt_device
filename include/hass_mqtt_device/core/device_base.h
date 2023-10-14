@@ -30,10 +30,10 @@ public:
   /**
    * @brief Construct a new DeviceBase object
    *
-   * @param deviceName The name of the device
+   * @param device_name The name of the device
    * @param unique_id The unique id of the device
    */
-  DeviceBase(const std::string &deviceName, const std::string &unique_id);
+  DeviceBase(const std::string &device_name, const std::string &unique_id);
 
   /**
    * @brief Destroy the DeviceBase object
@@ -130,7 +130,7 @@ public:
   void sendLWT();
 
 protected:
-  std::string m_deviceName;
+  std::string m_device_name;
   std::string m_unique_id;
   std::vector<std::shared_ptr<FunctionBase>> m_functions;
   std::weak_ptr<MQTTConnector> m_connector;
