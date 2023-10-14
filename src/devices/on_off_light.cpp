@@ -30,13 +30,13 @@ void OnOffLightDevice::init() {
   registerFunction(on_off_light_base);
 }
 
-void OnOffLightDevice::setState(bool state) {
+void OnOffLightDevice::set(bool state) {
   std::shared_ptr<OnOffLightFunction> on_off_light =
       std::dynamic_pointer_cast<OnOffLightFunction>(
           findFunction("on_off_light"));
   if(on_off_light)
   {
-  on_off_light->setState(state);
+  on_off_light->set(state);
   }
   else
   {

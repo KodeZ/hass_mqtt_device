@@ -53,6 +53,13 @@ public:
   std::string getName() const;
 
   /**
+   * @brief Get the unique ID of this function
+   *
+   * @return The name of this function
+   */
+  std::string getId() const;
+
+  /**
    * @brief Get the MQTT topics to subscribe to for this function
    *
    * @return The MQTT topic for this function
@@ -90,6 +97,8 @@ public:
   virtual void sendStatus() const = 0;
 
 protected:
+  std::string getBaseTopic() const;
+
   std::string m_functionName;
   std::weak_ptr<DeviceBase> m_parentDevice;
 

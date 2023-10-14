@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
             connector->getDevice(_device_name_prefix + std::to_string(i)));
         if (light) {
 
-          light->setState(_state[i]);
+          light->set(_state[i]);
           _state_updated[i] = false;
         } else {
           LOG_ERROR("Could not find device {}", i);

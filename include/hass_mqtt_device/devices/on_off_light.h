@@ -42,7 +42,7 @@ public:
    *
    * @param state The new state of the light
    */
-  void setState(bool state);
+  void set(bool state);
 
 private:
   std::function<void(bool)> m_control_state_cb;

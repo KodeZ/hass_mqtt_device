@@ -17,21 +17,21 @@
  * Derived from function base
  */
 
-class OnOffLightFunction : public FunctionBase {
+class DimmableLightFunction : public FunctionBase {
 public:
   /**
-   * @brief Construct a new OnOffLightFunction object
+   * @brief Construct a new DimmableLightFunction object
    *
    * @param parentDevice Reference to the parent device
    * @param functionName The name of the function
    */
-  OnOffLightFunction(const std::string &functionName,
-                     std::function<void(bool)> control_cb);
+  DimmableLightFunction(const std::string &functionName,
+                        std::function<void(bool, double)> control_cb);
 
   /**
-   * @brief Destroy the OnOffLightFunction object
+   * @brief Destroy the DimmableLightFunction object
    */
-  ~OnOffLightFunction() = default;
+  ~DimmableLightFunction() = default;
 
   /**
    * @brief Implement init function for this function
@@ -78,7 +78,7 @@ public:
    *
    * @param state The state to set
    */
-  void set(bool state);
+  void set(bool state, double brightness);
 
   /**
    * @brief Get the state of this function
@@ -87,9 +87,17 @@ public:
    */
   bool getState() const { return m_state; };
 
+  /**
+   * @brief Get the brightness of this function
+   *
+   * @return The brightness of this function
+   */
+  bool getBrightness() const { return m_brightness; };
+
 private:
 
 protected:
   bool m_state;
-  std::function<void(bool)> m_control_cb;
+  double m_brightness;
+  std::function<void(bool, double)> m_control_cb;
 };

@@ -15,3 +15,21 @@ FunctionBase::FunctionBase(const std::string &functionName)
     : m_functionName(functionName) {}
 
 std::string FunctionBase::getName() const { return m_functionName; }
+
+std::string FunctionBase::getId() const {
+  auto parent = m_parentDevice.lock();
+  if (!parent) {
+    LOG_ERROR("Parent device is not available.");
+    return "";
+  }
+  return parent->getFullId() + "_" + getName();
+}
+
+std::string FunctionBase::getBaseTopic() const {
+  auto parent = m_parentDevice.lock();
+  if (!parent) {
+    LOG_ERROR("Parent device is not available.");
+    return "";
+  }
+  return "home/" + parent->getFullId() + "/light/" + getName() + "/";
+};

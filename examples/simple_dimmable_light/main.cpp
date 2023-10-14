@@ -5,29 +5,38 @@
  */
 
 /**
- * This example shows how to create a simple on/off light device. It fakes
+ * This example shows how to create a simple dimmable light device. It fakes
  * changing the state of the light every 10 seconds. It will also respond to
  * control messages from the MQTT server, and respond with the current new
  * state. The device should be automatically discovered by Home Assistant.
  */
 
 #include "hass_mqtt_device/core/mqtt_connector.h"
-#include "hass_mqtt_device/devices/on_off_light.h"
+#include "hass_mqtt_device/devices/dimmable_light.h"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>
 
 bool _state = false;
-bool _state_updated = true;
+double _brightness = 0.0;
+bool _updated = true;
 
-void controlStateCallback(bool state) {
+void controlCallback(bool state, double brightness) {
   if (state != _state) {
     _state = state;
-    _state_updated = true;
+    _updated = true;
     LOG_INFO("State changed to {}", state);
   } else {
     LOG_INFO("State already set to {}", state);
+  }
+
+  if (brightness != _brightness) {
+    _brightness = brightness;
+    _updated = true;
+    LOG_INFO("Brightness changed to {}", brightness);
+  } else {
+    LOG_INFO("Brightness already set to {}", brightness);
   }
 }
 
@@ -58,11 +67,11 @@ int main(int argc, char *argv[]) {
     std::cout << "Could not open /etc/machine-id" << std::endl;
     return 1;
   }
-  unique_id += "_simple_on_off_light";
+  unique_id += "_simple_dimmable_light";
 
   // Create the device
-  auto light =
-      std::make_shared<OnOffLightDevice>("simple_on_off_light_example", unique_id, controlStateCallback);
+  auto light = std::make_shared<DimmableLightDevice>(
+      "simple_dimmable_light_example", unique_id, controlCallback);
   light->init();
 
   auto connector =
@@ -79,15 +88,16 @@ int main(int argc, char *argv[]) {
     // Every 10 seconds, change the state of the light
     if (loop_count % 10 == 0) {
       _state = !_state;
-      _state_updated = true;
+      _brightness = 1.0 - _brightness;
+      _updated = true;
     }
     loop_count++;
 
     // Every second, check if there is an update to the state of the light, and
     // if so, update the state
-    if (_state_updated) {
-      light->set(_state);
-      _state_updated = false;
+    if (_updated) {
+      light->set(_state, _brightness);
+      _updated = false;
     }
   }
 }
