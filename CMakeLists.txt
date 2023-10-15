@@ -43,7 +43,19 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
 
 # For tests, you can use CTest
 #enable_testing()
-#add_subdirectory(tests)
+#add_subdirectory(tests EXCLUDE_FROM_ALL)
+
+# Create a custom target for building tests
+#add_custom_target(tests
+#    COMMAND ${CMAKE_COMMAND} --build . --target all
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tests
+#)
 
 # For examples
 add_subdirectory(examples)
+
+# Create a custom target for building examples
+add_custom_target(examples
+    COMMAND ${CMAKE_COMMAND} --build . --target all
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/examples
+)

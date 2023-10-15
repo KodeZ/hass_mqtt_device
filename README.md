@@ -11,6 +11,10 @@ There are a number of functions and device types available. See the examples for
 - A modern C++ compiler with C++17 support.
 - CMake version 3.10 or higher for building the project.
 - Mosquitto MQTT broker development package
+- Spdlog
+```
+sudo apt install cmake libspdlog-dev nlohmann-json3-dev
+```
 
 ### Optional
 

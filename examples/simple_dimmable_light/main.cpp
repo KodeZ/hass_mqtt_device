@@ -51,12 +51,20 @@ void controlCallback(bool state, double brightness)
 // MQTT server as arguments
 int main(int argc, char* argv[])
 {
-    INIT_LOGGER_DEBUG();
+    bool debug = false;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--debug" || arg == "-d") {
+            debug = true;
+            break;
+        }
+    }
+    INIT_LOGGER(debug);
 
     // Check and read the arguments
-    if(argc != 5)
+    if(argc < 5)
     {
-        std::cout << "Usage: " << argv[0] << " <ip> <port> <username> <password>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <ip> <port> <username> <password> [-d]" << std::endl;
         return 1;
     }
     std::string ip = argv[1];

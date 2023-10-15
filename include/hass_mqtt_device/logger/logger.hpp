@@ -10,15 +10,10 @@
 #include <spdlog/spdlog.h>
 
 // Initialize the default logger with an output to console
-#define INIT_LOGGER()                                                          \
-  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");                   \
-  spdlog::stdout_color_mt("console")
-
-// Enable debug logging
-#define INIT_LOGGER_DEBUG()                                                    \
+#define INIT_LOGGER(debug)                                                     \
   spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");                   \
   spdlog::stdout_color_mt("console");                                          \
-  spdlog::set_level(spdlog::level::debug)
+  spdlog::set_level(debug ? spdlog::level::debug : spdlog::level::info)
 
 // Logging macros
 #define LOG_INFO(...) spdlog::info(__VA_ARGS__)

@@ -60,7 +60,16 @@ void updateOutputs();
 // The main function.
 int main(int argc, char* argv[])
 {
-    INIT_LOGGER_DEBUG();
+    bool debug = false;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--debug" || arg == "-d") {
+            debug = true;
+            break;
+        }
+    }
+    INIT_LOGGER(debug);
+
 #ifdef __arm__
     wiringPiSetup();
 #endif
