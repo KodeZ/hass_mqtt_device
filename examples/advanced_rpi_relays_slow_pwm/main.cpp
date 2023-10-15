@@ -61,9 +61,11 @@ void updateOutputs();
 int main(int argc, char* argv[])
 {
     bool debug = false;
-    for (int i = 1; i < argc; ++i) {
+    for(int i = 1; i < argc; ++i)
+    {
         std::string arg(argv[i]);
-        if (arg == "--debug" || arg == "-d") {
+        if(arg == "--debug" || arg == "-d")
+        {
             debug = true;
             break;
         }
@@ -236,7 +238,7 @@ int main(int argc, char* argv[])
             _updated = false;
 
             int i = 0;
-            for(auto function : rpi_pwm->getFunctions())
+            for(const auto& function : rpi_pwm->getFunctions())
             {
                 std::dynamic_pointer_cast<NumberFunction>(function)->update(_relay_values[i++]);
             }
@@ -253,7 +255,6 @@ void updateOutputs()
     loop_count++;
 
     std::vector<bool> states(_relay_count);
-    states.reserve(_relay_count);
 
     for(int i = 0; i < _relay_count; i++)
     {
@@ -262,18 +263,18 @@ void updateOutputs()
             if((loop_count + (i * loop_count / _relay_count)) % _pwm_period < (_relay_values[i] * _pwm_period) / 100)
             {
                 digitalWrite(_relay_pins[i], active_pin_state);
-                states.push_back(true);
+                states[i] = true;
             }
             else
             {
                 digitalWrite(_relay_pins[i], !active_pin_state);
-                states.push_back(false);
+                states[i] = false;
             }
         }
         else
         {
             digitalWrite(_relay_pins[i], !active_pin_state);
-                states.push_back(false);
+            states[i] = false;
         }
     }
 
