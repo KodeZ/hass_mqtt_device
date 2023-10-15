@@ -9,30 +9,30 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-# Compiler flags
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
 # Specify the required C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-# Include directories
-include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the library
-add_library(hass_mqtt_device STATIC ${SOURCES})
+add_library(hass_mqtt_device SHARED ${SOURCES})
+
+# Compiler flags
+target_compile_options(hass_mqtt_device PRIVATE 
+  $<$<CONFIG:Debug>:-g3 -O0>
+  $<$<CONFIG:Release>:-O3>
+)
+
+# Include directories
+target_include_directories(hass_mqtt_device PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(hass_mqtt_device PUBLIC ${MOSQUITTO_INCLUDE_DIRS})
 
 # Find required libraries
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MOSQUITTO REQUIRED libmosquitto)
 find_package(spdlog REQUIRED)
-
-# Include Mosquitto headers
-include_directories(${MOSQUITTO_INCLUDE_DIRS})
 
 # Link libraries
 target_link_libraries(hass_mqtt_device ${MOSQUITTO_LIBRARIES} spdlog::spdlog)
