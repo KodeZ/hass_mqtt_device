@@ -11,91 +11,103 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-DimmableLightFunction::DimmableLightFunction(
-    const std::string &functionName,
-    std::function<void(bool, double)> control_cb)
-    : FunctionBase(functionName), m_control_cb(control_cb) {}
-
-void DimmableLightFunction::init() {
-  LOG_DEBUG("Initializing dimmable light function {}", getName());
+DimmableLightFunction::DimmableLightFunction(const std::string& functionName, std::function<void(bool, double)> control_cb)
+    : FunctionBase(functionName)
+    , m_control_cb(control_cb)
+{
 }
 
-std::vector<std::string> DimmableLightFunction::getSubscribeTopics() const {
-  // Create a vector of the topics
-  std::vector<std::string> topics;
-  topics.push_back(getBaseTopic() + "set");
-  return topics;
+void DimmableLightFunction::init()
+{
+    LOG_DEBUG("Initializing dimmable light function {}", getName());
 }
 
-std::string DimmableLightFunction::getDiscoveryTopic() const {
-  auto parent = m_parentDevice.lock();
-  if (!parent) {
-    LOG_ERROR("Parent device is not available.");
-    return "";
-  }
-  return "homeassistant/light/" + parent->getFullId() + "/" + getName() +
-         "/config";
+std::vector<std::string> DimmableLightFunction::getSubscribeTopics() const
+{
+    // Create a vector of the topics
+    std::vector<std::string> topics;
+    topics.push_back(getBaseTopic() + "set");
+    return topics;
 }
 
-json DimmableLightFunction::getDiscoveryJson() const {
-  json discoveryJson;
-  discoveryJson["name"] = getName();
-  discoveryJson["unique_id"] = getId();
-  // On/off
-  discoveryJson["state_topic"] = getBaseTopic() + "state";
-  discoveryJson["command_topic"] = getBaseTopic() + "set";
-  // Brightness
-  discoveryJson["brightness"] = true;
-
-  return discoveryJson;
+std::string DimmableLightFunction::getDiscoveryTopic() const
+{
+    auto parent = m_parentDevice.lock();
+    if(!parent)
+    {
+        LOG_ERROR("Parent device is not available.");
+        return "";
+    }
+    return "homeassistant/light/" + parent->getFullId() + "/" + getName() + "/config";
 }
 
-void DimmableLightFunction::processMessage(const std::string &topic,
-                                           const std::string &payload) {
-  LOG_DEBUG("Processing message for dimmable light function {} with topic {}",
-            getName(), topic);
+json DimmableLightFunction::getDiscoveryJson() const
+{
+    json discoveryJson;
+    discoveryJson["name"] = getName();
+    discoveryJson["unique_id"] = getId();
+    // On/off
+    discoveryJson["state_topic"] = getBaseTopic() + "state";
+    discoveryJson["command_topic"] = getBaseTopic() + "set";
+    // Brightness
+    discoveryJson["brightness"] = true;
 
-  // Check if the topic is really for us
-  if (topic != getBaseTopic() + "set") {
-    LOG_DEBUG("State topic is not for us ({} != {}).", topic,
-              getBaseTopic() + "set");
-    return;
-  }
-
-  // Decode the payload
-  json payloadJson;
-  try {
-    payloadJson = json::parse(payload);
-  } catch (const json::exception &e) {
-    LOG_ERROR("JSON error in payload: {}. Error: {}", payload, e.what());
-    return;
-  }
-
-  // Handle the sub topics
-  double brightness = payloadJson["brightness"];
-  brightness /= 255.0;
-  m_control_cb(payloadJson["state"] == "ON", brightness);
+    return discoveryJson;
 }
 
-void DimmableLightFunction::sendStatus() const {
-  auto parent = m_parentDevice.lock();
-  if (!parent) {
-    LOG_ERROR("Parent device is no longer available.");
-    return;
-  }
+void DimmableLightFunction::processMessage(const std::string& topic, const std::string& payload)
+{
+    LOG_DEBUG("Processing message for dimmable light function {} with topic {}", getName(), topic);
 
-  json payload;
-  // Convert brightness to int scale 0-255, round to nearest int
-  int brightness_int = std::round(m_brightness * 255.0);
-  LOG_DEBUG("Sending status for dimmable light function {} with state {} and brightness {}",
-            getName(), m_state, brightness_int);
-  payload["state"] = m_state ? "ON" : "OFF";
-  payload["brightness"] = brightness_int;
-  parent->publishMessage(getBaseTopic() + "state", payload);
+    // Check if the topic is really for us
+    if(topic != getBaseTopic() + "set")
+    {
+        LOG_DEBUG("State topic is not for us ({} != {}).", topic, getBaseTopic() + "set");
+        return;
+    }
+
+    // Decode the payload
+    json payloadJson;
+    try
+    {
+        payloadJson = json::parse(payload);
+    }
+    catch(const json::exception& e)
+    {
+        LOG_ERROR("JSON error in payload: {}. Error: {}", payload, e.what());
+        return;
+    }
+
+    // Handle the sub topics
+    double brightness = payloadJson["brightness"];
+    brightness /= 255.0;
+    m_control_cb(payloadJson["state"] == "ON", brightness);
 }
 
-void DimmableLightFunction::update(bool state, double brightness) {
-  m_state = state;
-  m_brightness = brightness;
-  sendStatus();
+void DimmableLightFunction::sendStatus() const
+{
+    auto parent = m_parentDevice.lock();
+    if(!parent)
+    {
+        LOG_ERROR("Parent device is no longer available.");
+        return;
+    }
+
+    json payload;
+    // Convert brightness to int scale 0-255, round to nearest int
+    int brightness_int = std::round(m_brightness * 255.0);
+    LOG_DEBUG("Sending status for dimmable light function {} with state {} and brightness {}",
+              getName(),
+              m_state,
+              brightness_int);
+    payload["state"] = m_state ? "ON" : "OFF";
+    payload["brightness"] = brightness_int;
+    parent->publishMessage(getBaseTopic() + "state", payload);
+}
+
+void DimmableLightFunction::update(bool state, double brightness)
+{
+    m_state = state;
+    m_brightness = brightness;
+    sendStatus();
 }

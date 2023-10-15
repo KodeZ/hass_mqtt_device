@@ -17,88 +17,92 @@
  * Derived from function base
  */
 
-class DimmableLightFunction : public FunctionBase {
+class DimmableLightFunction : public FunctionBase
+{
 public:
-  /**
-   * @brief Construct a new DimmableLightFunction object
-   *
-   * @param parentDevice Reference to the parent device
-   * @param functionName The name of the function
-   */
-  DimmableLightFunction(const std::string &functionName,
-                        std::function<void(bool, double)> control_cb);
+    /**
+     * @brief Construct a new DimmableLightFunction object
+     *
+     * @param parentDevice Reference to the parent device
+     * @param functionName The name of the function
+     */
+    DimmableLightFunction(const std::string& functionName, std::function<void(bool, double)> control_cb);
 
-  /**
-   * @brief Destroy the DimmableLightFunction object
-   */
-  ~DimmableLightFunction() = default;
+    /**
+     * @brief Destroy the DimmableLightFunction object
+     */
+    ~DimmableLightFunction() = default;
 
-  /**
-   * @brief Implement init function for this function
-   */
-  void init() override;
+    /**
+     * @brief Implement init function for this function
+     */
+    void init() override;
 
-  /**
-   * @brief Implements the subscribe topics function for this function
-   *
-   * @return The MQTT topic for this function
-   */
-  std::vector<std::string> getSubscribeTopics() const override;
+    /**
+     * @brief Implements the subscribe topics function for this function
+     *
+     * @return The MQTT topic for this function
+     */
+    std::vector<std::string> getSubscribeTopics() const override;
 
-  /**
-   * @brief Implements the discovery topic function for this function
-   *
-   * @return The discovery topic for this function
-   */
-  std::string getDiscoveryTopic() const override;
+    /**
+     * @brief Implements the discovery topic function for this function
+     *
+     * @return The discovery topic for this function
+     */
+    std::string getDiscoveryTopic() const override;
 
-  /**
-   * @brief Implements the discovery payload function for this function
-   *
-   * @return The discovery payload for this function
-   */
-  json getDiscoveryJson() const override;
+    /**
+     * @brief Implements the discovery payload function for this function
+     *
+     * @return The discovery payload for this function
+     */
+    json getDiscoveryJson() const override;
 
-  /**
-   * @brief Implement process message function for this function
-   *
-   * @param topic The topic of the message
-   * @param payload The payload of the message
-   */
-  void processMessage(const std::string &topic,
-                      const std::string &payload) override;
+    /**
+     * @brief Implement process message function for this function
+     *
+     * @param topic The topic of the message
+     * @param payload The payload of the message
+     */
+    void processMessage(const std::string& topic, const std::string& payload) override;
 
-  /**
-   * @brief Implement sending status for all values
-   */
-  void sendStatus() const override;
+    /**
+     * @brief Implement sending status for all values
+     */
+    void sendStatus() const override;
 
-  /**
-   * @brief Set the state of this function
-   *
-   * @param state The state to set
-   * @param brightness The brightness to set (0-1)
-   */
-  void update(bool state, double brightness);
+    /**
+     * @brief Set the state of this function
+     *
+     * @param state The state to set
+     * @param brightness The brightness to set (0-1)
+     */
+    void update(bool state, double brightness);
 
-  /**
-   * @brief Get the state of this function
-   *
-   * @return The state of this function
-   */
-  bool getState() const { return m_state; };
+    /**
+     * @brief Get the state of this function
+     *
+     * @return The state of this function
+     */
+    bool getState() const
+    {
+        return m_state;
+    };
 
-  /**
-   * @brief Get the brightness of this function
-   *
-   * @return The brightness of this function
-   */
-  bool getBrightness() const { return m_brightness; };
+    /**
+     * @brief Get the brightness of this function
+     *
+     * @return The brightness of this function
+     */
+    bool getBrightness() const
+    {
+        return m_brightness;
+    };
 
 private:
-
 protected:
-  bool m_state;
-  double m_brightness;
-  std::function<void(bool, double)> m_control_cb;
+    bool m_state;
+    double m_brightness;
+    std::function<void(bool, double)> m_control_cb;
 };

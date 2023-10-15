@@ -17,29 +17,31 @@
  * Derived from DeviceBase
  */
 
-OnOffLightDevice::OnOffLightDevice(const std::string &device_name,
-                                   const std::string &unique_id,
+OnOffLightDevice::OnOffLightDevice(const std::string& device_name,
+                                   const std::string& unique_id,
                                    std::function<void(bool)> control_cb)
-    : DeviceBase(device_name, unique_id),
-      m_control_cb(control_cb) {}
-
-void OnOffLightDevice::init() {
-  std::shared_ptr<OnOffLightFunction> on_off_light =
-      std::make_shared<OnOffLightFunction>("on_off_light", m_control_cb);
-  std::shared_ptr<FunctionBase> on_off_light_base = on_off_light;
-  registerFunction(on_off_light_base);
+    : DeviceBase(device_name, unique_id)
+    , m_control_cb(control_cb)
+{
 }
 
-void OnOffLightDevice::update(bool state) {
-  std::shared_ptr<OnOffLightFunction> on_off_light =
-      std::dynamic_pointer_cast<OnOffLightFunction>(
-          findFunction("on_off_light"));
-  if(on_off_light)
-  {
-  on_off_light->update(state);
-  }
-  else
-  {
-    LOG_ERROR("Could not find on_off_light function");
-  }
+void OnOffLightDevice::init()
+{
+    std::shared_ptr<OnOffLightFunction> on_off_light = std::make_shared<OnOffLightFunction>("on_off_light", m_control_cb);
+    std::shared_ptr<FunctionBase> on_off_light_base = on_off_light;
+    registerFunction(on_off_light_base);
+}
+
+void OnOffLightDevice::update(bool state)
+{
+    std::shared_ptr<OnOffLightFunction> on_off_light =
+        std::dynamic_pointer_cast<OnOffLightFunction>(findFunction("on_off_light"));
+    if(on_off_light)
+    {
+        on_off_light->update(state);
+    }
+    else
+    {
+        LOG_ERROR("Could not find on_off_light function");
+    }
 }

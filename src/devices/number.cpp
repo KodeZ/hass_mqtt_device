@@ -16,17 +16,21 @@
  * Derived from DeviceBase
  */
 
-NumberDevice::NumberDevice(
-    const std::string &device_name, const std::string &unique_id,
-    std::function<void(double)> control_cb)
-    : DeviceBase(device_name, unique_id), m_control_cb(control_cb) {}
-
-void NumberDevice::init() {
-  m_number = std::make_shared<NumberFunction>(
-      "number", m_control_cb);
-  registerFunction(m_number);
+NumberDevice::NumberDevice(const std::string& device_name,
+                           const std::string& unique_id,
+                           std::function<void(double)> control_cb)
+    : DeviceBase(device_name, unique_id)
+    , m_control_cb(control_cb)
+{
 }
 
-void NumberDevice::update(double number) {
-  m_number->update(number);
+void NumberDevice::init()
+{
+    m_number = std::make_shared<NumberFunction>("number", m_control_cb);
+    registerFunction(m_number);
+}
+
+void NumberDevice::update(double number)
+{
+    m_number->update(number);
 }

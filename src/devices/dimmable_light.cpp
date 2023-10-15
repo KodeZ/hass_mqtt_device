@@ -16,17 +16,21 @@
  * Derived from DeviceBase
  */
 
-DimmableLightDevice::DimmableLightDevice(
-    const std::string &device_name, const std::string &unique_id,
-    std::function<void(bool, double)> control_cb)
-    : DeviceBase(device_name, unique_id), m_control_cb(control_cb) {}
-
-void DimmableLightDevice::init() {
-  m_dimmable_light = std::make_shared<DimmableLightFunction>(
-      "dimmable_light", m_control_cb);
-  registerFunction(m_dimmable_light);
+DimmableLightDevice::DimmableLightDevice(const std::string& device_name,
+                                         const std::string& unique_id,
+                                         std::function<void(bool, double)> control_cb)
+    : DeviceBase(device_name, unique_id)
+    , m_control_cb(control_cb)
+{
 }
 
-void DimmableLightDevice::update(bool state, double brightness) {
-  m_dimmable_light->update(state, brightness);
+void DimmableLightDevice::init()
+{
+    m_dimmable_light = std::make_shared<DimmableLightFunction>("dimmable_light", m_control_cb);
+    registerFunction(m_dimmable_light);
+}
+
+void DimmableLightDevice::update(bool state, double brightness)
+{
+    m_dimmable_light->update(state, brightness);
 }

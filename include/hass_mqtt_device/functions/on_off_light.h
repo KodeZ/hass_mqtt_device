@@ -17,79 +17,80 @@
  * Derived from function base
  */
 
-class OnOffLightFunction : public FunctionBase {
+class OnOffLightFunction : public FunctionBase
+{
 public:
-  /**
-   * @brief Construct a new OnOffLightFunction object
-   *
-   * @param parentDevice Reference to the parent device
-   * @param functionName The name of the function
-   */
-  OnOffLightFunction(const std::string &functionName,
-                     std::function<void(bool)> control_cb);
+    /**
+     * @brief Construct a new OnOffLightFunction object
+     *
+     * @param parentDevice Reference to the parent device
+     * @param functionName The name of the function
+     */
+    OnOffLightFunction(const std::string& functionName, std::function<void(bool)> control_cb);
 
-  /**
-   * @brief Destroy the OnOffLightFunction object
-   */
-  ~OnOffLightFunction() = default;
+    /**
+     * @brief Destroy the OnOffLightFunction object
+     */
+    ~OnOffLightFunction() = default;
 
-  /**
-   * @brief Implement init function for this function
-   */
-  void init() override;
+    /**
+     * @brief Implement init function for this function
+     */
+    void init() override;
 
-  /**
-   * @brief Implements the subscribe topics function for this function
-   *
-   * @return The MQTT topic for this function
-   */
-  std::vector<std::string> getSubscribeTopics() const override;
+    /**
+     * @brief Implements the subscribe topics function for this function
+     *
+     * @return The MQTT topic for this function
+     */
+    std::vector<std::string> getSubscribeTopics() const override;
 
-  /**
-   * @brief Implements the discovery topic function for this function
-   *
-   * @return The discovery topic for this function
-   */
-  std::string getDiscoveryTopic() const override;
+    /**
+     * @brief Implements the discovery topic function for this function
+     *
+     * @return The discovery topic for this function
+     */
+    std::string getDiscoveryTopic() const override;
 
-  /**
-   * @brief Implements the discovery payload function for this function
-   *
-   * @return The discovery payload for this function
-   */
-  json getDiscoveryJson() const override;
+    /**
+     * @brief Implements the discovery payload function for this function
+     *
+     * @return The discovery payload for this function
+     */
+    json getDiscoveryJson() const override;
 
-  /**
-   * @brief Implement process message function for this function
-   *
-   * @param topic The topic of the message
-   * @param payload The payload of the message
-   */
-  void processMessage(const std::string &topic,
-                      const std::string &payload) override;
+    /**
+     * @brief Implement process message function for this function
+     *
+     * @param topic The topic of the message
+     * @param payload The payload of the message
+     */
+    void processMessage(const std::string& topic, const std::string& payload) override;
 
-  /**
-   * @brief Implement sending status for all values
-   */
-  void sendStatus() const override;
+    /**
+     * @brief Implement sending status for all values
+     */
+    void sendStatus() const override;
 
-  /**
-   * @brief Set the state of this function
-   *
-   * @param state The state to set
-   */
-  void update(bool state);
+    /**
+     * @brief Set the state of this function
+     *
+     * @param state The state to set
+     */
+    void update(bool state);
 
-  /**
-   * @brief Get the state of this function
-   *
-   * @return The state of this function
-   */
-  bool getState() const { return m_state; };
+    /**
+     * @brief Get the state of this function
+     *
+     * @return The state of this function
+     */
+    bool getState() const
+    {
+        return m_state;
+    };
 
 private:
-
 protected:
-  bool m_state;
-  std::function<void(bool)> m_control_cb;
+    bool m_state;
+    std::function<void(bool)> m_control_cb;
 };
