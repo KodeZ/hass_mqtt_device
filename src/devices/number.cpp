@@ -4,7 +4,7 @@
  * @copyright   See LICENSE file
  */
 
-#include "hass_mqtt_device/devices/dimmable_light.h"
+#include "hass_mqtt_device/devices/number.h"
 #include "hass_mqtt_device/core/function_base.h"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include <functional>
@@ -16,17 +16,17 @@
  * Derived from DeviceBase
  */
 
-DimmableLightDevice::DimmableLightDevice(
+NumberDevice::NumberDevice(
     const std::string &device_name, const std::string &unique_id,
-    std::function<void(bool, double)> control_cb)
+    std::function<void(double)> control_cb)
     : DeviceBase(device_name, unique_id), m_control_cb(control_cb) {}
 
-void DimmableLightDevice::init() {
-  m_dimmable_light = std::make_shared<DimmableLightFunction>(
-      "dimmable_light", m_control_cb);
-  registerFunction(m_dimmable_light);
+void NumberDevice::init() {
+  m_number = std::make_shared<NumberFunction>(
+      "number", m_control_cb);
+  registerFunction(m_number);
 }
 
-void DimmableLightDevice::update(bool state, double brightness) {
-  m_dimmable_light->update(state, brightness);
+void NumberDevice::update(double number) {
+  m_number->update(number);
 }

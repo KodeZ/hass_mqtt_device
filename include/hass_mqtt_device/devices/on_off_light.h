@@ -21,10 +21,10 @@ public:
    *
    * @param device_name The name of the device
    * @param unique_id The unique id of the device
-   * @param control_state_cb The callback to call when the state of the light
+   * @param control_cb The callback to call when the state of the light
    */
   OnOffLightDevice(const std::string &device_name, const std::string &unique_id,
-                   std::function<void(bool)> control_state_cb);
+                   std::function<void(bool)> control_cb);
 
   /**
    * @brief Destroy the Light object
@@ -42,8 +42,8 @@ public:
    *
    * @param state The new state of the light
    */
-  void set(bool state);
+  void update(bool state);
 
 private:
-  std::function<void(bool)> m_control_state_cb;
+  std::function<void(bool)> m_control_cb;
 };

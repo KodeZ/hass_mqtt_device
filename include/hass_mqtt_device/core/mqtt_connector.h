@@ -82,8 +82,10 @@ public:
    * @note This method should be called in the main loop
    *
    * @param timeout The timeout in milliseconds
+   * @param exit_on_event If true, the method will return immediately if a
+   * message is received
    */
-  void processMessages(int timeout);
+  void processMessages(int timeout, bool exit_on_event = false);
 
   /**
    * @brief Send a message to the MQTT server

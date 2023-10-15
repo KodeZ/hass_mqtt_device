@@ -12,8 +12,8 @@
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-OnOffLightFunction::OnOffLightFunction(
-    const std::string &functionName, std::function<void(bool)> control_cb)
+OnOffLightFunction::OnOffLightFunction(const std::string &functionName,
+                                       std::function<void(bool)> control_cb)
     : FunctionBase(functionName), m_control_cb(control_cb) {}
 
 void OnOffLightFunction::init() {
@@ -42,7 +42,6 @@ json OnOffLightFunction::getDiscoveryJson() const {
   json discoveryJson;
   discoveryJson["name"] = getName();
   discoveryJson["unique_id"] = getId();
-  discoveryJson["schema"] = "json";
   // On/off
   discoveryJson["state_topic"] = getBaseTopic() + "state";
   discoveryJson["command_topic"] = getBaseTopic() + "set";
@@ -87,7 +86,7 @@ void OnOffLightFunction::sendStatus() const {
   parent->publishMessage(getBaseTopic() + "state", payload);
 }
 
-void OnOffLightFunction::set(bool state) {
+void OnOffLightFunction::update(bool state) {
   m_state = state;
   sendStatus();
 }

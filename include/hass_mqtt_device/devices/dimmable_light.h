@@ -23,14 +23,11 @@ public:
    *
    * @param device_name The name of the device
    * @param unique_id The unique id of the device
-   * @param control_state_cb The callback to call when receiving a state control
-   * @param control_brightness_cb The callback to call when receiving a
-   * brightness control. The value will be 0 for off or very dim, 1 for full
-   * brightness
+   * @param control_cb The callback to call when receiving a control message
    */
   DimmableLightDevice(const std::string &device_name,
                       const std::string &unique_id,
-                      std::function<void(bool, double)> control_state_cb);
+                      std::function<void(bool, double)> control_cb);
 
   /**
    * @brief Destroy the Light object
@@ -50,7 +47,7 @@ public:
    * @param brightness The updated brightness of the light, 0-1 value, 0 is off
    * or very dim, 1 is full brightness
    */
-  void set(bool state, double brightness);
+  void update(bool state, double brightness);
 
 private:
   std::shared_ptr<DimmableLightFunction> m_dimmable_light;

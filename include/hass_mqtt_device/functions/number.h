@@ -17,21 +17,22 @@
  * Derived from function base
  */
 
-class OnOffLightFunction : public FunctionBase {
+class NumberFunction : public FunctionBase {
 public:
   /**
-   * @brief Construct a new OnOffLightFunction object
+   * @brief Construct a new NumberFunction object
    *
    * @param parentDevice Reference to the parent device
    * @param functionName The name of the function
    */
-  OnOffLightFunction(const std::string &functionName,
-                     std::function<void(bool)> control_cb);
+  NumberFunction(const std::string &functionName,
+                 std::function<void(double)> control_cb, double max = 100,
+                 double min = 0, double step = 1);
 
   /**
-   * @brief Destroy the OnOffLightFunction object
+   * @brief Destroy the NumberFunction object
    */
-  ~OnOffLightFunction() = default;
+  ~NumberFunction() = default;
 
   /**
    * @brief Implement init function for this function
@@ -78,18 +79,20 @@ public:
    *
    * @param state The state to set
    */
-  void update(bool state);
+  void update(double number);
 
   /**
-   * @brief Get the state of this function
+   * @brief Get the brightness of this function
    *
-   * @return The state of this function
+   * @return The brightness of this function
    */
-  bool getState() const { return m_state; };
+  bool getNumber() const { return m_number; };
 
 private:
-
 protected:
-  bool m_state;
-  std::function<void(bool)> m_control_cb;
+  double m_number;
+  double m_max;
+  double m_min;
+  double m_step;
+  std::function<void(double)> m_control_cb;
 };

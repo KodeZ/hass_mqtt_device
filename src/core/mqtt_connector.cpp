@@ -119,7 +119,7 @@ MQTTConnector::getDevice(const std::string &device_name) const {
 }
 
 // Process incoming MQTT messages
-void MQTTConnector::processMessages(int timeout) {
+void MQTTConnector::processMessages(int timeout, bool exit_on_event) {
   if (!isConnected()) {
     LOG_DEBUG("Not connected to MQTT server. Attempting to reconnect.");
     static int slept_for = 0;
@@ -164,6 +164,9 @@ void MQTTConnector::processMessages(int timeout) {
     int rc = mosquitto_loop(m_mosquitto, remaining.count(), 1);
     if (rc != MOSQ_ERR_SUCCESS && rc != MOSQ_ERR_NO_CONN) {
       LOG_ERROR("Failed to process MQTT messages: {}", mosquitto_strerror(rc));
+    }
+    if(exit_on_event) {
+      break;
     }
   }
 }

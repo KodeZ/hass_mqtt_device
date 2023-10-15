@@ -42,8 +42,7 @@ std::vector<std::string> DeviceBase::getSubscribeTopics() const {
 void DeviceBase::registerFunction(std::shared_ptr<FunctionBase> function) {
   // Check if the function wit the same discovery topic already exists
   for (auto &existingFunction : m_functions) {
-    if (existingFunction->getName() ==
-        function->getName()) {
+    if (existingFunction->getName() == function->getName()) {
       LOG_ERROR("Function with discovery topic {} already exists",
                 function->getDiscoveryTopic());
       throw std::runtime_error("Function with discovery topic already exists");
@@ -78,6 +77,7 @@ void DeviceBase::sendDiscovery() {
       throw std::runtime_error("Duplicate discovery topic found for device");
     }
 
+    discoveryJson["schema"] = "json";
     discoveryJson["availability_topic"] = "home/" + getId() + "/availability";
     discoveryJson["availability_template"] = "{{ value_json.availability }}";
 

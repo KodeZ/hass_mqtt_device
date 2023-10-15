@@ -41,7 +41,6 @@ json DimmableLightFunction::getDiscoveryJson() const {
   json discoveryJson;
   discoveryJson["name"] = getName();
   discoveryJson["unique_id"] = getId();
-  discoveryJson["schema"] = "json";
   // On/off
   discoveryJson["state_topic"] = getBaseTopic() + "state";
   discoveryJson["command_topic"] = getBaseTopic() + "set";
@@ -95,7 +94,7 @@ void DimmableLightFunction::sendStatus() const {
   parent->publishMessage(getBaseTopic() + "state", payload);
 }
 
-void DimmableLightFunction::set(bool state, double brightness) {
+void DimmableLightFunction::update(bool state, double brightness) {
   m_state = state;
   m_brightness = brightness;
   sendStatus();

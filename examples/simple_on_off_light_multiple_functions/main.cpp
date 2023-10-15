@@ -76,7 +76,6 @@ int main(int argc, char *argv[]) {
       std::make_shared<MQTTConnector>(ip, port, username, password);
 
   // Create the device
-  // Create the device
   auto light = std::make_shared<DeviceBase>(
       "simple_on_off_light_multiple_functions", unique_id);
 
@@ -120,7 +119,7 @@ int main(int argc, char *argv[]) {
             std::dynamic_pointer_cast<OnOffLightFunction>(
                 light->findFunction(function_name));
         if (on_off_light) {
-          on_off_light->set(_state[i]);
+          on_off_light->update(_state[i]);
           _state_updated[i] = false;
         } else {
           LOG_ERROR("Could not find on_off_light function");

@@ -86,6 +86,15 @@ public:
   std::shared_ptr<FunctionBase> findFunction(const std::string &name) const;
 
   /**
+   * @brief Get the functions of this device
+   *
+   * @return The functions of this device
+   */
+  std::vector<std::shared_ptr<FunctionBase>> getFunctions() const {
+    return m_functions;
+  }
+
+  /**
    * @brief Process an incoming MQTT message
    *
    * @param topic The topic of the incoming message. This will be concatenated

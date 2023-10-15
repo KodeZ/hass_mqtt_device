@@ -77,8 +77,9 @@ public:
    * @brief Set the state of this function
    *
    * @param state The state to set
+   * @param brightness The brightness to set (0-1)
    */
-  void set(bool state, double brightness);
+  void update(bool state, double brightness);
 
   /**
    * @brief Get the state of this function

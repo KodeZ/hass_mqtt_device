@@ -5,38 +5,29 @@
  */
 
 /**
- * This example shows how to create a simple dimmable light device. It fakes
- * changing the state of the light every 10 seconds. It will also respond to
- * control messages from the MQTT server, and respond with the current new
- * state. The device should be automatically discovered by Home Assistant.
+ * This example shows how to create a simple number device. It fakes changing
+ * the number every 10 seconds. It will also respond to control messages from
+ * the MQTT server, and respond with the current new number. The device should
+ * be automatically discovered by Home Assistant.
  */
 
 #include "hass_mqtt_device/core/mqtt_connector.h"
-#include "hass_mqtt_device/devices/dimmable_light.h"
+#include "hass_mqtt_device/devices/number.h"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include <fstream>
 #include <iostream>
 #include <memory>
 
-bool _state = false;
-double _brightness = 0.0;
+double _number = 0.0;
 bool _updated = true;
 
-void controlCallback(bool state, double brightness) {
-  if (state != _state) {
-    _state = state;
+void controlCallback(double number) {
+  if (number != _number) {
+    _number = number;
     _updated = true;
-    LOG_INFO("State changed to {}", state);
+    LOG_INFO("number changed to {}", number);
   } else {
-    LOG_INFO("State already set to {}", state);
-  }
-
-  if (brightness != _brightness) {
-    _brightness = brightness;
-    _updated = true;
-    LOG_INFO("Brightness changed to {}", brightness);
-  } else {
-    LOG_INFO("Brightness already set to {}", brightness);
+    LOG_INFO("number already set to {}", number);
   }
 }
 
@@ -56,8 +47,7 @@ int main(int argc, char *argv[]) {
   std::string username = argv[3];
   std::string password = argv[4];
 
-  // Create a light device with the name "light" and the unique id grabbed from
-  // /etc/machine-id
+  // Create a number device
   std::string unique_id;
   std::ifstream machine_id_file("/etc/machine-id");
   if (machine_id_file.good()) {
@@ -67,16 +57,16 @@ int main(int argc, char *argv[]) {
     std::cout << "Could not open /etc/machine-id" << std::endl;
     return 1;
   }
-  unique_id += "_simple_dimmable_light";
+  unique_id += "_simple_number_example";
 
   // Create the device
-  auto light = std::make_shared<DimmableLightDevice>(
-      "simple_dimmable_light_example", unique_id, controlCallback);
-  light->init();
+  auto number = std::make_shared<NumberDevice>("simple_number_example",
+                                               unique_id, controlCallback);
+  number->init();
 
   auto connector =
       std::make_shared<MQTTConnector>(ip, port, username, password);
-  connector->registerDevice(light);
+  connector->registerDevice(number);
   connector->connect();
 
   // Run the device
@@ -85,18 +75,17 @@ int main(int argc, char *argv[]) {
     // Process messages from the MQTT server for 1 second
     connector->processMessages(1000);
 
-    // Every 10 seconds, change the state of the light
+    // Every 10 seconds, change the number of the number
     if (loop_count % 10 == 0) {
-      _state = !_state;
-      _brightness = 1.0 - _brightness;
+      _number = 100 - _number;
       _updated = true;
     }
     loop_count++;
 
-    // Every second, check if there is an update to the state of the light, and
-    // if so, update the state
+    // Every second, check if there is an update to the number of the number,
+    // and if so, update the number
     if (_updated) {
-      light->update(_state, _brightness);
+      number->update(_number);
       _updated = false;
     }
   }

@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     // Every second, check if there is an update to the state of the light, and
     // if so, update the state
     if (_state_updated) {
-      light->set(_state);
+      light->update(_state);
       _state_updated = false;
     }
   }
