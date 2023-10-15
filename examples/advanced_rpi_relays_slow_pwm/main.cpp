@@ -252,6 +252,9 @@ void updateOutputs()
     static int loop_count = 0;
     loop_count++;
 
+    std::vector<bool> states(_relay_count);
+    states.reserve(_relay_count);
+
     for(int i = 0; i < _relay_count; i++)
     {
         if(_relay_values[i] > 0)
@@ -259,15 +262,33 @@ void updateOutputs()
             if((loop_count + (i * loop_count / _relay_count)) % _pwm_period < (_relay_values[i] * _pwm_period) / 100)
             {
                 digitalWrite(_relay_pins[i], active_pin_state);
+                states.push_back(true);
             }
             else
             {
                 digitalWrite(_relay_pins[i], !active_pin_state);
+                states.push_back(false);
             }
         }
         else
         {
             digitalWrite(_relay_pins[i], !active_pin_state);
+                states.push_back(false);
         }
+    }
+
+    // Write to /tmp/rpi_relays_pwm with all the output states
+    std::ofstream status("/tmp/rpi_relays_pwm");
+    if(status.is_open())
+    {
+        for(int i = 0; i < _relay_count; i++)
+        {
+            status << states[i] << std::endl;
+        }
+        status.close();
+    }
+    else
+    {
+        LOG_WARN("Could not open /tmp/rpi_relays_pwm");
     }
 }
