@@ -1,0 +1,18 @@
+{
+    "devicename": "hass_device",
+    "ip": "10.0.0.10",
+    "port": 1883,
+    "username": "hass",
+    "password": "secret",
+    "status_file": "/var/lib/hass_device/status.json",
+    "functions": [
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 21, "type": "pwm", "period":600000, "offset":0, "active_state":false},  "name": "Room_1" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 22, "type": "pwm", "period":600000, "offset":75000, "active_state":false},  "name": "Room_2" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 23, "type": "pwm", "period":600000, "offset":150000, "active_state":false},  "name": "Room_3" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 27, "type": "pwm", "period":600000, "offset":225000, "active_state":false},  "name": "Room_4" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 24, "type": "pwm", "period":600000, "offset":300000, "active_state":false},  "name": "Room_5" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 28, "type": "pwm", "period":600000, "offset":375000, "active_state":false},  "name": "Room_6" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 29, "type": "pwm", "period":600000, "offset":450000, "active_state":false},  "name": "Room_7" },
+        { "type":"number", "parameters":{"min":0, "max":100, "step": 1}, "usage":{"gpio": 25, "type": "pwm", "period":600000, "offset":525000, "active_state":false},  "name": "Room_8" }
+    ]
+}

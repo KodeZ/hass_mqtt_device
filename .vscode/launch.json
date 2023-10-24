@@ -198,7 +198,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/examples/advanced_rpi_relays_slow_pwm/advanced_rpi_relays_slow_pwm",
-            "args": [
+            "args": [ "-d"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

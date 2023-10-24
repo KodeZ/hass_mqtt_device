@@ -5,7 +5,7 @@
  */
 
 /**
- * This example shows how to create a rpi_pwm advanced device with for a rpi
+ * This example shows how to create a device advanced device with for a rpi
  * with relays. The example assumes that the following product is used, but is
  * easily modified: https://smile.amazon.com/gp/product/B07JF4D814 The board has
  * a silly pinout connectivity, so we need a translation table for the relays.
@@ -32,30 +32,28 @@ void digitalWrite(int pin, bool state)
 }
 #endif
 
-int _relay_count = 8;
-std::vector<int> _relay_pins = {21, 22, 23, 27, 24, 28, 29, 25};
-std::vector<double> _relay_values = {0, 0, 0, 0, 0, 0, 0, 0};
-std::vector<double> _relay_values_saved = {0, 0, 0, 0, 0, 0, 0, 0};
-bool _updated = false;
-const std::string _function_name_prefix = "rpi_relays_pwm_";
-const int _pwm_period = 600; // 10 minutes
-const bool active_pin_state = false;
+const int tick_size_ms = 1000;
 
-void controlCallback(int relay, double number)
+// Making the config global to avoid passing it around
+nlohmann::json config;
+
+bool _updated = false;
+
+void controlNumberCallback(int index, double number)
 {
-    if(number != _relay_values[relay])
+    if(number != config["functions"][index]["value"])
     {
-        _relay_values[relay] = number;
+        config["functions"][index]["value"] = number;
         _updated = true;
-        LOG_INFO("number changed to {}", number);
+        LOG_INFO("number for index {} changed to {}", index, number);
     }
     else
     {
-        LOG_INFO("number already set to {}", number);
+        LOG_INFO("number for index {} already set to {}", index, number);
     }
 }
 
-void updateOutputs();
+void updateNumberPwmOutputs();
 
 // The main function.
 int main(int argc, char* argv[])
@@ -76,79 +74,57 @@ int main(int argc, char* argv[])
     wiringPiSetup();
 #endif
 
-    // Read ip, port, username and password from a config file in
-    // /etc/rpi_relays.conf The config file should look like this:
-    // ip x.x.x.x
-    // port y
-    // username hass
-    // password secret
-
-    // Read the config file as json
-    std::string ip;
-    int port;
-    std::string username;
-    std::string password;
-    std::string status_file;
-    std::vector<std::string> names;
-
+    // Read the config file
+    LOG_DEBUG("Reading config file");
     std::ifstream config_file("/etc/rpi_relays.json");
     if(!config_file.is_open())
     {
-        std::cerr << "Could not open /etc/rpi_relays.json" << std::endl;
+        LOG_ERROR("Could not open /etc/rpi_relays.json");
         return 1;
     }
 
     try
     {
-        nlohmann::json config = nlohmann::json::parse(config_file);
-        ip = config.at("ip").get<std::string>();
-        port = config.at("port").get<int>();
-        username = config.at("username").get<std::string>();
-        password = config.at("password").get<std::string>();
-        status_file = config.at("status_file").get<std::string>();
-        for(auto name : config.at("names"))
-        {
-            names.push_back(name.get<std::string>());
-        }
-        if(names.size() != _relay_count)
-        {
-            std::cerr << "Number of names in config file does not match number of relays" << std::endl;
-            return 1;
-        }
+        config = nlohmann::json::parse(config_file);
     }
     catch(const nlohmann::json::exception& e)
     {
-        std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+        LOG_ERROR("Error parsing JSON: {}", e.what());
         return 1;
     }
+    config_file.close();
 
     // Read the status file
-    std::ifstream status(status_file);
-    if(status.is_open())
     {
-        std::string line;
-        int i = 0;
-        while(std::getline(status, line))
+        LOG_DEBUG("Reading status file");
+        auto status_file_name = config.at("status_file").get<std::string>();
+        std::ifstream status_file(status_file_name);
+        if(status_file.good())
         {
+            int i = 0;
             try
             {
-                _relay_values[i++] = std::stod(line);
-                _relay_values_saved[i] = _relay_values[i];
+                nlohmann::json status_json = nlohmann::json::parse(status_file);
+                for(const auto& function : status_json["functions"])
+                {
+                    if(function.contains("value"))
+                    {
+                        config["functions"][i]["value"] = function["value"];
+                    }
+                    ++i;
+                }
             }
-            catch(const std::exception& e)
+            catch(const nlohmann::json::exception& e)
             {
-                std::cerr << "Error parsing status file: " << e.what() << std::endl;
-                return 1;
+                LOG_ERROR("Error parsing JSON: {}", e.what());
             }
+            status_file.close();
         }
-        status.close();
+        else
+        {
+            std::cerr << "Could not open status file" << std::endl;
+        }
     }
-    else
-    {
-        std::cerr << "Could not open status file" << std::endl;
-    }
-
-    config_file.close();
 
     // Get a unique ID
     std::string unique_id;
@@ -166,43 +142,70 @@ int main(int argc, char* argv[])
     unique_id += "_rpi_relays_pwm";
 
     // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(config.at("ip").get<std::string>(),
+                                                     config.at("port").get<int>(),
+                                                     config.at("username").get<std::string>(),
+                                                     config.at("password").get<std::string>());
 
     // Create the device
-    auto rpi_pwm = std::make_shared<DeviceBase>("rpi_relays_slow_pwm", unique_id);
+    auto device = std::make_shared<DeviceBase>("rpi_relays_slow_pwm", unique_id);
 
     // Create the functions
-    for(int i = 0; i < _relay_count; i++)
+    int index = 0;
+    for(auto& function : config["functions"])
     {
-        std::string function_name = _function_name_prefix + std::to_string(i);
-        if(names.size() > i)
+        if(function["type"] == "number")
         {
-            function_name = names[i];
+            std::shared_ptr<NumberFunction> func_ptr = std::make_shared<NumberFunction>(
+                function["name"],
+                [index](double state) { controlNumberCallback(index, state); },
+                function["parameters"]["max"].get<double>(),
+                function["parameters"]["min"].get<double>(),
+                function["parameters"]["step"].get<double>());
+            auto value = function["parameters"]["min"].get<double>();
+            if(function.contains("value"))
+            {
+                value = function["value"].get<double>();
+            }
+            else
+            {
+                // Making sure that there at least is a value
+                function["value"] = value;
+            }
+            func_ptr->update(value);
+            device->registerFunction(func_ptr);
         }
-        std::shared_ptr<NumberFunction> number_func =
-            std::make_shared<NumberFunction>(function_name, [i](double state) { controlCallback(i, state); });
-        number_func->update(_relay_values[i]);
-        rpi_pwm->registerFunction(number_func);
+        else
+        {
+            LOG_WARN("Unknown function type {}", function["type"].get<std::string>());
+            return 1;
+        }
+        ++index;
     }
 
     // Register the device
-    connector->registerDevice(rpi_pwm);
+    connector->registerDevice(device);
     connector->connect();
 
-    rpi_pwm->sendStatus();
+    device->sendStatus();
 
     // Run the device
+    // Here we loop forever, and basically handle incoming messages and update
+    // the output registers. Every second we also update the outputs accordingly.
+    // Every 2 minutes we check if any of the settings have changed, and if so
+    // we save the state to the status file.
     int loop_count = 0;
-    while(1)
+    while(true)
     {
         ++loop_count;
         // If we have been running for 2 minutes, save the state (if changed)
-        if(loop_count % (2 * 60) == 0)
+        if(loop_count % (2 * 60 * (1000 / tick_size_ms)) == 0)
         {
             bool changed = false;
-            for(int i = 0; i < _relay_count; i++)
+            for(const auto& function : config["functions"])
             {
-                if(_relay_values[i] != _relay_values_saved[i])
+                if(!function.contains("value_saved") ||
+                   (function.contains("value") && function["value"] != function["values_saved"]))
                 {
                     changed = true;
                     break;
@@ -211,15 +214,24 @@ int main(int argc, char* argv[])
             if(changed)
             {
                 LOG_DEBUG("Saving state");
-                std::ofstream status(status_file);
-                if(status.is_open())
+                auto status_file_name = config.at("status_file").get<std::string>();
+                std::ofstream status_file(status_file_name);
+                if(status_file.is_open())
                 {
-                    for(int i = 0; i < _relay_count; i++)
+                    nlohmann::json status_json;
+                    for(auto& function : config["functions"])
                     {
-                        status << _relay_values[i] << std::endl;
-                        _relay_values_saved[i] = _relay_values[i];
+                        function["value_saved"] = function["value"];
+                        nlohmann::json function_json;
+                        function_json["name"] = function["name"];
+                        if(function.contains("value"))
+                        {
+                            function_json["value"] = function["value"];
+                        }
+                        status_json["functions"].push_back(function_json);
                     }
-                    status.close();
+                    status_file << status_json.dump(4);
+                    status_file.close();
                 }
                 else
                 {
@@ -228,68 +240,86 @@ int main(int argc, char* argv[])
             }
         }
 
-        // Process messages from the MQTT server for 1 second
-        connector->processMessages(1000);
-
-        // Every second, check if there is an update
+        // Every loop, check if there is an update
         if(_updated)
         {
             // Send status for all functions
             _updated = false;
 
             int i = 0;
-            for(const auto& function : rpi_pwm->getFunctions())
+            for(const auto& function : device->getFunctions())
             {
-                std::dynamic_pointer_cast<NumberFunction>(function)->update(_relay_values[i++]);
+                if(config["functions"][i].contains("value"))
+                {
+                    LOG_INFO("Updating function {} to {}", function->getName(), config["functions"][i].dump());
+                    // For number types, we need to update the value as a double
+                    if(config["functions"][i]["type"] == "number")
+                    {
+                        std::dynamic_pointer_cast<NumberFunction>(function)->update(
+                            config["functions"][i]["value"].get<double>());
+                    }
+                }
+                ++i;
             }
         }
 
         // Update the outputs
-        updateOutputs();
+        updateNumberPwmOutputs();
+
+        // Process messages from the MQTT server for 1 second
+        connector->processMessages(tick_size_ms);
     }
 }
 
-void updateOutputs()
+void updateNumberPwmOutputs()
 {
     static int loop_count = 0;
     loop_count++;
 
-    std::vector<bool> states(_relay_count);
-
-    for(int i = 0; i < _relay_count; i++)
+    std::ofstream status("/tmp/rpi_relays_pwm");
+    if(!status.good())
     {
-        if(_relay_values[i] > 0)
+        LOG_WARN("Could not open /tmp/rpi_relays_pwm");
+    }
+
+    int i = 0;
+    for(auto& function : config["functions"])
+    {
+        // We only care about number functions here
+        if(function["type"] != "number" || function["usage"]["type"] != "pwm")
         {
-            if((loop_count + (i * loop_count / _relay_count)) % _pwm_period < (_relay_values[i] * _pwm_period) / 100)
+            continue;
+        }
+        if(function["value"] > 0)
+        {
+            int count_offset = function["usage"]["offset"].get<int>() / tick_size_ms;
+            int period = function["usage"]["period"].get<int>() / tick_size_ms;
+            if((loop_count + count_offset) % period <
+               (function["value"].get<double>() * period) / function["parameters"]["max"].get<double>())
             {
-                digitalWrite(_relay_pins[i], active_pin_state);
-                states[i] = true;
+                digitalWrite(function["usage"]["gpio"], function["usage"]["active_state"]);
+                function["state"] = true;
             }
             else
             {
-                digitalWrite(_relay_pins[i], !active_pin_state);
-                states[i] = false;
+                digitalWrite(function["usage"]["gpio"], !function["usage"]["active_state"]);
+                function["state"] = false;
             }
         }
         else
         {
-            digitalWrite(_relay_pins[i], !active_pin_state);
-            states[i] = false;
+            digitalWrite(function["usage"]["gpio"], !function["usage"]["active_state"]);
+            function["state"] = false;
         }
+        if(status.good())
+        {
+            status << function["usage"]["gpio"] << " " << function["state"] << " " << function["name"] << std::endl;
+        }
+        ++i;
     }
 
-    // Write to /tmp/rpi_relays_pwm with all the output states
-    std::ofstream status("/tmp/rpi_relays_pwm");
     if(status.is_open())
     {
-        for(int i = 0; i < _relay_count; i++)
-        {
-            status << states[i] << std::endl;
-        }
         status.close();
-    }
-    else
-    {
-        LOG_WARN("Could not open /tmp/rpi_relays_pwm");
     }
 }

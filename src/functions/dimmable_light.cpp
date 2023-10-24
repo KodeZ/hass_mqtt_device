@@ -89,7 +89,6 @@ void DimmableLightFunction::sendStatus() const
     auto parent = m_parentDevice.lock();
     if(!parent)
     {
-        LOG_ERROR("Parent device is no longer available.");
         return;
     }
 
