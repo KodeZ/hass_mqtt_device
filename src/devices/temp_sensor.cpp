@@ -43,7 +43,7 @@ void TemperatureSensorDevice::update(double value)
         std::dynamic_pointer_cast<SensorFunction<double>>(findFunction("temperature"));
     if(temperature)
     {
-        //temperature->update(value);
+        temperature->update(value);
     }
     else
     {
