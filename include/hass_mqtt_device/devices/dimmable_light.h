@@ -30,11 +30,6 @@ public:
                         std::function<void(bool, double)> control_cb);
 
     /**
-     * @brief Destroy the Light object
-     */
-    ~DimmableLightDevice() = default;
-
-    /**
      * @brief Implement init function for this device
      */
     void init();

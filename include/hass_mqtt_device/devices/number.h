@@ -28,11 +28,6 @@ public:
     NumberDevice(const std::string& device_name, const std::string& unique_id, std::function<void(double)> control_cb);
 
     /**
-     * @brief Destroy the Light object
-     */
-    ~NumberDevice() = default;
-
-    /**
      * @brief Implement init function for this device
      */
     void init();

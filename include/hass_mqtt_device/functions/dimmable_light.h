@@ -23,15 +23,10 @@ public:
     /**
      * @brief Construct a new DimmableLightFunction object
      *
-     * @param parentDevice Reference to the parent device
      * @param functionName The name of the function
+     * @param control_cb The callback function for controlling the device
      */
     DimmableLightFunction(const std::string& functionName, std::function<void(bool, double)> control_cb);
-
-    /**
-     * @brief Destroy the DimmableLightFunction object
-     */
-    ~DimmableLightFunction() = default;
 
     /**
      * @brief Implement init function for this function

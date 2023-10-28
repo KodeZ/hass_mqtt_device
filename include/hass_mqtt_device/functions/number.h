@@ -33,11 +33,6 @@ public:
                    double step = 1);
 
     /**
-     * @brief Destroy the NumberFunction object
-     */
-    ~NumberFunction() = default;
-
-    /**
      * @brief Implement init function for this function
      */
     void init() override;

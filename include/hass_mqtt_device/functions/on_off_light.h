@@ -29,11 +29,6 @@ public:
     OnOffLightFunction(const std::string& functionName, std::function<void(bool)> control_cb);
 
     /**
-     * @brief Destroy the OnOffLightFunction object
-     */
-    ~OnOffLightFunction() = default;
-
-    /**
      * @brief Implement init function for this function
      */
     void init() override;
