@@ -14,8 +14,8 @@
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-SwitchFunction::SwitchFunction(const std::string& functionName, std::function<void(bool)> control_cb)
-    : FunctionBase(functionName)
+SwitchFunction::SwitchFunction(const std::string& function_name, std::function<void(bool)> control_cb)
+    : FunctionBase(function_name)
     , m_control_cb(std::move(control_cb))
 {
 }
@@ -35,7 +35,7 @@ std::vector<std::string> SwitchFunction::getSubscribeTopics() const
 
 std::string SwitchFunction::getDiscoveryTopic() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         LOG_ERROR("Parent device is not available.");
@@ -46,7 +46,7 @@ std::string SwitchFunction::getDiscoveryTopic() const
 
 json SwitchFunction::getDiscoveryJson() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     json discoveryJson;
     discoveryJson["name"] = getName();
     discoveryJson["unique_id"] = getId();
@@ -86,7 +86,7 @@ void SwitchFunction::processMessage(const std::string& topic, const std::string&
 
 void SwitchFunction::sendStatus() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         return;

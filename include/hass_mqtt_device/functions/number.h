@@ -23,13 +23,13 @@ public:
     /**
      * @brief Construct a new NumberFunction object
      *
-     * @param functionName The name of the function
+     * @param function_name The name of the function
      * @param control_cb The callback function for controlling the device
      * @param max The maximum value of the number
      * @param min The minimum value of the number
      * @param step The step size of the number
      */
-    NumberFunction(const std::string& functionName,
+    NumberFunction(const std::string& function_name,
                    std::function<void(double)> control_cb,
                    double max = 100,
                    double min = 0,

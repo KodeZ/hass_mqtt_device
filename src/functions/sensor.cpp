@@ -19,8 +19,8 @@ template class SensorFunction<std::string>;
 template class SensorFunction<bool>;
 
 template<typename T>
-SensorFunction<T>::SensorFunction(const std::string& functionName, const SensorAttributes& attributes)
-    : FunctionBase(functionName)
+SensorFunction<T>::SensorFunction(const std::string& function_name, const SensorAttributes& attributes)
+    : FunctionBase(function_name)
     , m_attributes(attributes)
 {}
 
@@ -33,7 +33,7 @@ void SensorFunction<T>::init()
 template<typename T>
 std::string SensorFunction<T>::getDiscoveryTopic() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         LOG_ERROR("Parent device is not available.");
@@ -61,7 +61,7 @@ json SensorFunction<T>::getDiscoveryJson() const
 template<typename T>
 void SensorFunction<T>::sendStatus() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         return;

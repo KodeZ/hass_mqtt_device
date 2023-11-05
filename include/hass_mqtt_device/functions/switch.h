@@ -23,10 +23,10 @@ public:
     /**
      * @brief Construct a new SwitchFunction object
      *
-     * @param functionName The name of the function
+     * @param function_name The name of the function
      * @param control_cb The callback function for controlling the device
      */
-    SwitchFunction(const std::string& functionName, std::function<void(bool)> control_cb);
+    SwitchFunction(const std::string& function_name, std::function<void(bool)> control_cb);
 
     /**
      * @brief Implement init function for this function

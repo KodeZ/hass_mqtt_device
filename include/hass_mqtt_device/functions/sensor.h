@@ -50,11 +50,11 @@ public:
     /**
      * @brief Construct a new SensorFunction object
      *
-     * @param functionName The name of the function
+     * @param function_name The name of the function
      * @param attributes The sensors that this function has. The key is the name of the sensor, and the value is the
      * attributes of the sensor
      */
-    SensorFunction(const std::string& functionName, const SensorAttributes& attributes);
+    SensorFunction(const std::string& function_name, const SensorAttributes& attributes);
 
     /**
      * @brief Implement init function for this function

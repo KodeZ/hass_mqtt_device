@@ -11,8 +11,8 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-DimmableLightFunction::DimmableLightFunction(const std::string& functionName, std::function<void(bool, double)> control_cb)
-    : FunctionBase(functionName)
+DimmableLightFunction::DimmableLightFunction(const std::string& function_name, std::function<void(bool, double)> control_cb)
+    : FunctionBase(function_name)
     , m_control_cb(control_cb)
 {
 }
@@ -32,7 +32,7 @@ std::vector<std::string> DimmableLightFunction::getSubscribeTopics() const
 
 std::string DimmableLightFunction::getDiscoveryTopic() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         LOG_ERROR("Parent device is not available.");
@@ -86,7 +86,7 @@ void DimmableLightFunction::processMessage(const std::string& topic, const std::
 
 void DimmableLightFunction::sendStatus() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         return;

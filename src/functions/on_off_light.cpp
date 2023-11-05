@@ -12,8 +12,8 @@
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-OnOffLightFunction::OnOffLightFunction(const std::string& functionName, std::function<void(bool)> control_cb)
-    : FunctionBase(functionName)
+OnOffLightFunction::OnOffLightFunction(const std::string& function_name, std::function<void(bool)> control_cb)
+    : FunctionBase(function_name)
     , m_control_cb(control_cb)
 {
 }
@@ -33,7 +33,7 @@ std::vector<std::string> OnOffLightFunction::getSubscribeTopics() const
 
 std::string OnOffLightFunction::getDiscoveryTopic() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         LOG_ERROR("Parent device is not available.");
@@ -44,7 +44,7 @@ std::string OnOffLightFunction::getDiscoveryTopic() const
 
 json OnOffLightFunction::getDiscoveryJson() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     json discoveryJson;
     discoveryJson["name"] = getName();
     discoveryJson["unique_id"] = getId();
@@ -84,7 +84,7 @@ void OnOffLightFunction::processMessage(const std::string& topic, const std::str
 
 void OnOffLightFunction::sendStatus() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         return;

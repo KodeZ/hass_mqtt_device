@@ -29,10 +29,10 @@ public:
     /**
      * @brief Construct a new FunctionBase object
      *
-     * @param parentDevice Reference to the parent device
-     * @param functionName The name of the function
+     * @param parent_device Reference to the parent device
+     * @param function_name The name of the function
      */
-    FunctionBase(const std::string& functionName);
+    FunctionBase(const std::string& function_name);
 
     /**
      * @brief Destroy the FunctionBase object
@@ -99,14 +99,14 @@ public:
 protected:
     std::string getBaseTopic() const;
 
-    std::string m_functionName;
-    std::weak_ptr<DeviceBase> m_parentDevice;
+    std::string m_function_name;
+    std::weak_ptr<DeviceBase> m_parent_device;
 
 private:
     friend void DeviceBase::registerFunction(std::shared_ptr<FunctionBase> function);
-    void setParentDevice(std::weak_ptr<DeviceBase> parentDevice)
+    void setParentDevice(std::weak_ptr<DeviceBase> parent_device)
     {
-        m_parentDevice = parentDevice;
+        m_parent_device = parent_device;
         init();
     };
 };

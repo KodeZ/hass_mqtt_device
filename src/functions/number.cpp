@@ -11,12 +11,12 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-NumberFunction::NumberFunction(const std::string& functionName,
+NumberFunction::NumberFunction(const std::string& function_name,
                                std::function<void(double)> control_cb,
                                double max,
                                double min,
                                double step)
-    : FunctionBase(functionName)
+    : FunctionBase(function_name)
     , m_control_cb(control_cb)
     , m_max(max)
     , m_min(min)
@@ -46,7 +46,7 @@ std::vector<std::string> NumberFunction::getSubscribeTopics() const
 
 std::string NumberFunction::getDiscoveryTopic() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         LOG_ERROR("Parent device is not available.");
@@ -123,7 +123,7 @@ void NumberFunction::processMessage(const std::string& topic, const std::string&
 
 void NumberFunction::sendStatus() const
 {
-    auto parent = m_parentDevice.lock();
+    auto parent = m_parent_device.lock();
     if(!parent)
     {
         return;
