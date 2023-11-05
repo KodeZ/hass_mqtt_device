@@ -40,5 +40,5 @@ std::string FunctionBase::getBaseTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "home/" + parent->getFullId() + "/light/" + getName() + "/";
+    return "home/" + parent->getFullId() + "/" + getName() + "/";
 };

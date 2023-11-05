@@ -23,8 +23,8 @@ public:
     /**
      * @brief Construct a new OnOffLightFunction object
      *
-     * @param parentDevice Reference to the parent device
      * @param functionName The name of the function
+     * @param control_cb The callback function for controlling the device
      */
     OnOffLightFunction(const std::string& functionName, std::function<void(bool)> control_cb);
 
@@ -38,21 +38,21 @@ public:
      *
      * @return The MQTT topic for this function
      */
-    std::vector<std::string> getSubscribeTopics() const override;
+    [[nodiscard]] std::vector<std::string> getSubscribeTopics() const override;
 
     /**
      * @brief Implements the discovery topic function for this function
      *
      * @return The discovery topic for this function
      */
-    std::string getDiscoveryTopic() const override;
+    [[nodiscard]] std::string getDiscoveryTopic() const override;
 
     /**
      * @brief Implements the discovery payload function for this function
      *
      * @return The discovery payload for this function
      */
-    json getDiscoveryJson() const override;
+    [[nodiscard]] json getDiscoveryJson() const override;
 
     /**
      * @brief Implement process message function for this function
@@ -79,7 +79,7 @@ public:
      *
      * @return The state of this function
      */
-    bool getState() const
+    [[nodiscard]] bool getState() const
     {
         return m_state;
     };

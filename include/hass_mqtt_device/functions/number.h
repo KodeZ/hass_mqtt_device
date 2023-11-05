@@ -12,7 +12,7 @@
 #include <memory>
 
 /**
- * @brief Class for an on/off only light device
+ * @brief Class for a number device
  *
  * Derived from function base
  */
@@ -23,8 +23,11 @@ public:
     /**
      * @brief Construct a new NumberFunction object
      *
-     * @param parentDevice Reference to the parent device
      * @param functionName The name of the function
+     * @param control_cb The callback function for controlling the device
+     * @param max The maximum value of the number
+     * @param min The minimum value of the number
+     * @param step The step size of the number
      */
     NumberFunction(const std::string& functionName,
                    std::function<void(double)> control_cb,
@@ -42,21 +45,21 @@ public:
      *
      * @return The MQTT topic for this function
      */
-    std::vector<std::string> getSubscribeTopics() const override;
+    [[nodiscard]] std::vector<std::string> getSubscribeTopics() const override;
 
     /**
      * @brief Implements the discovery topic function for this function
      *
      * @return The discovery topic for this function
      */
-    std::string getDiscoveryTopic() const override;
+    [[nodiscard]] std::string getDiscoveryTopic() const override;
 
     /**
      * @brief Implements the discovery payload function for this function
      *
      * @return The discovery payload for this function
      */
-    json getDiscoveryJson() const override;
+    [[nodiscard]] json getDiscoveryJson() const override;
 
     /**
      * @brief Implement process message function for this function
@@ -79,11 +82,11 @@ public:
     void update(double number);
 
     /**
-     * @brief Get the brightness of this function
+     * @brief Get the value of this function
      *
-     * @return The brightness of this function
+     * @return The value of this function
      */
-    bool getNumber() const
+    [[nodiscard]] double getNumber() const
     {
         return m_number;
     };
