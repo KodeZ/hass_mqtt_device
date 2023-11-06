@@ -166,6 +166,14 @@ public:
     void updateDeviceMode(const std::string& device_mode, bool send_status = true);
 
     /**
+     * @brief Set the power state of the device
+     *
+     * @param power The power state of the device
+     * @param send_status If true, send full status to the broker
+     */
+    void updatePowerState(bool power, bool send_status = true);
+
+    /**
      * @brief Set the action state of the device
      *
      * @param action The action state of the device
@@ -204,6 +212,7 @@ protected:
     double m_humidity_setpoint;
     HvacAction m_action;
     std::string m_device_mode; // Auto, Cool, Heat, Dry, Fan only type modes
+    std::string m_device_mode_last; // Used if turned off via power control, to remember the last mode
     std::string m_fan_mode;
     std::string m_swing_mode;
     std::string m_preset_mode;

@@ -33,6 +33,12 @@ HvacFunction::HvacFunction(const std::string& function_name,
     , m_heating_setpoint(18.0)
     , m_cooling_setpoint(25.0)
     , m_humidity_setpoint(60.0)
+    , m_humidity(0.0)
+    , m_fan_mode("auto")
+    , m_swing_mode("off")
+    , m_device_mode("off")
+    , m_action(HvacAction::OFF)
+    , m_preset_mode("none")
 {
 }
 
@@ -91,7 +97,7 @@ std::string HvacFunction::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/hvac/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/climate/" + parent->getFullId() + "/" + getName() + "/config";
 }
 
 json HvacFunction::getDiscoveryJson() const
@@ -108,17 +114,17 @@ json HvacFunction::getDiscoveryJson() const
     }
     if((m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING) != 0U)
     {
-        discoveryJson["temperature_high_command_topic"] = getBaseTopic() + "heating_temperature/set";
-        discoveryJson["temperature_high_command_template"] = "{{ value_json.heating_temperature_setpoint }}";
-        discoveryJson["temperature_state_topic"] = getBaseTopic() + "heating_temperature/state";
-        discoveryJson["temperature_state_template"] = "{{ value_json.heating_temperature_setpoint }}";
+        discoveryJson["temperature_low_command_topic"] = getBaseTopic() + "heating_temperature/set";
+        discoveryJson["temperature_low_command_template"] = R"({"value": "{{ value }}" })";
+        discoveryJson["temperature_low_state_topic"] = getBaseTopic() + "heating_temperature/state";
+        discoveryJson["temperature_low_state_template"] = "{{ value_json.value }}";
     }
     if((m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING) != 0U)
     {
-        discoveryJson["temperature_low_command_topic"] = getBaseTopic() + "cooling_temperature/set";
-        discoveryJson["temperature_low_command_template"] = "{{ value_json.cooling_temperature_setpoint }}";
-        discoveryJson["temperature_state_topic"] = getBaseTopic() + "cooling_temperature/state";
-        discoveryJson["temperature_state_template"] = "{{ value_json.cooling_temperature_setpoint }}";
+        discoveryJson["temperature_high_command_topic"] = getBaseTopic() + "cooling_temperature/set";
+        discoveryJson["temperature_high_command_template"] = R"({"value": "{{ value }}" })";
+        discoveryJson["temperature_high_state_topic"] = getBaseTopic() + "cooling_temperature/state";
+        discoveryJson["temperature_high_state_template"] = "{{ value_json.value }}";
     }
     if((m_supported_features & HvacSupportedFeatures::HUMIDITY) != 0U)
     {
@@ -128,37 +134,39 @@ json HvacFunction::getDiscoveryJson() const
     if((m_supported_features & HvacSupportedFeatures::HUMIDITY_CONTROL) != 0U) // Target humidity
     {
         discoveryJson["target_humidity_command_topic"] = getBaseTopic() + "humidity/set";
-        discoveryJson["target_humidity_command_template"] = "{{ value_json.humidity_setpoint }}";
+        discoveryJson["target_humidity_command_template"] = R"({"value": "{{ value }}" })";
         discoveryJson["target_humidity_state_topic"] = getBaseTopic() + "humidity/state";
-        discoveryJson["target_humidity_state_template"] = "{{ value_json.humidity_setpoint }}";
+        discoveryJson["target_humidity_state_template"] = "{{ value_json.value }}";
     }
     if((m_supported_features & HvacSupportedFeatures::FAN_MODE) != 0U)
     {
         discoveryJson["fan_mode_command_topic"] = getBaseTopic() + "fan_mode/set";
-        discoveryJson["fan_mode_command_template"] = "{{ value_json.fan_mode }}";
+        discoveryJson["fan_mode_command_template"] = R"({"value": "{{ value }}" })";
         discoveryJson["fan_mode_state_topic"] = getBaseTopic() + "fan_mode/state";
-        discoveryJson["fan_mode_state_template"] = "{{ value_json.fan_mode }}";
+        discoveryJson["fan_mode_state_template"] = "{{ value_json.value }}";
         discoveryJson["fan_modes"] = m_fan_modes;
     }
     if((m_supported_features & HvacSupportedFeatures::SWING_MODE) != 0U)
     {
         discoveryJson["swing_mode_command_topic"] = getBaseTopic() + "swing_mode/set";
-        discoveryJson["swing_mode_command_template"] = "{{ value_json.swing_mode }}";
+        discoveryJson["swing_mode_command_template"] = R"({"value": "{{ value }}" })";
         discoveryJson["swing_mode_state_topic"] = getBaseTopic() + "swing_mode/state";
-        discoveryJson["swing_mode_state_template"] = "{{ value_json.swing_mode }}";
+        discoveryJson["swing_mode_state_template"] = "{{ value_json.value }}";
         discoveryJson["swing_modes"] = m_swing_modes;
     }
     if((m_supported_features & HvacSupportedFeatures::POWER_CONTROL) != 0U)
     {
         discoveryJson["power_command_topic"] = getBaseTopic() + "set";
-        discoveryJson["power_command_template"] = "{{ value_json.power }}";
+        discoveryJson["power_command_template"] = R"({"value": "{{ value }}" })";
+        discoveryJson["payload_on"] = "on";
+        discoveryJson["payload_off"] = "off";
     }
     if((m_supported_features & HvacSupportedFeatures::MODE_CONTROL) != 0U)
     {
         discoveryJson["mode_command_topic"] = getBaseTopic() + "mode/set";
-        discoveryJson["mode_command_template"] = "{{ value_json.mode }}";
+        discoveryJson["mode_command_template"] = R"({"value": "{{ value }}" })";
         discoveryJson["mode_state_topic"] = getBaseTopic() + "mode/state";
-        discoveryJson["mode_state_template"] = "{{ value_json.mode }}";
+        discoveryJson["mode_state_template"] = "{{ value_json.value }}";
         discoveryJson["modes"] = m_device_modes;
     }
     if((m_supported_features & HvacSupportedFeatures::ACTION) != 0U)
@@ -169,9 +177,9 @@ json HvacFunction::getDiscoveryJson() const
     if((m_supported_features & HvacSupportedFeatures::PRESET_SUPPORT) != 0U)
     {
         discoveryJson["preset_mode_command_topic"] = getBaseTopic() + "preset_mode/set";
-        discoveryJson["preset_mode_command_template"] = "{{ value_json.preset_mode }}";
+        discoveryJson["preset_mode_command_template"] = R"({"value": "{{ value }}" })";
         discoveryJson["preset_mode_state_topic"] = getBaseTopic() + "preset_mode/state";
-        discoveryJson["preset_mode_state_template"] = "{{ value_json.preset_mode }}";
+        discoveryJson["preset_mode_value_template"] = "{{ value_json.value }}";
         discoveryJson["preset_modes"] = m_preset_modes;
     }
 
@@ -180,12 +188,12 @@ json HvacFunction::getDiscoveryJson() const
 
 void HvacFunction::processMessage(const std::string& topic, const std::string& payload)
 {
-    LOG_DEBUG("Processing message for hvac function {} with topic {}", getName(), topic);
+    LOG_DEBUG("Processing message for hvac function {} with topic {} and payload {}", getName(), topic, payload);
 
     // Check if the topic is really for us
-    if(topic != getBaseTopic() + "set")
+    if(topic.find(getBaseTopic()) != 0U)
     {
-        LOG_DEBUG("State topic is not for us ({} != {}).", topic, getBaseTopic() + "set");
+        LOG_ERROR("Topic {} is not for this function", topic);
         return;
     }
 
@@ -201,63 +209,63 @@ void HvacFunction::processMessage(const std::string& topic, const std::string& p
         return;
     }
 
+    auto value = payloadJson["value"].get<std::string>();
+
     // Handle the sub topics
     if((m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING) != 0U)
     {
         if(topic == getBaseTopic() + "heating_temperature/set")
         {
-            m_control_cb(HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING,
-                         payloadJson["heating_temperature_setpoint"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING) != 0U)
     {
         if(topic == getBaseTopic() + "cooling_temperature/set")
         {
-            m_control_cb(HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING,
-                         payloadJson["cooling_temperature_setpoint"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::HUMIDITY_CONTROL) != 0U)
     {
         if(topic == getBaseTopic() + "humidity/set")
         {
-            m_control_cb(HvacSupportedFeatures::HUMIDITY_CONTROL, payloadJson["humidity_setpoint"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::HUMIDITY_CONTROL, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::FAN_MODE) != 0U)
     {
         if(topic == getBaseTopic() + "fan_mode/set")
         {
-            m_control_cb(HvacSupportedFeatures::FAN_MODE, payloadJson["fan_mode"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::FAN_MODE, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::SWING_MODE) != 0U)
     {
         if(topic == getBaseTopic() + "swing_mode/set")
         {
-            m_control_cb(HvacSupportedFeatures::SWING_MODE, payloadJson["swing_mode"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::SWING_MODE, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::POWER_CONTROL) != 0U)
     {
         if(topic == getBaseTopic() + "set")
         {
-            m_control_cb(HvacSupportedFeatures::POWER_CONTROL, payloadJson["power"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::POWER_CONTROL, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::MODE_CONTROL) != 0U)
     {
         if(topic == getBaseTopic() + "mode/set")
         {
-            m_control_cb(HvacSupportedFeatures::MODE_CONTROL, payloadJson["mode"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::MODE_CONTROL, value);
         }
     }
     if((m_supported_features & HvacSupportedFeatures::PRESET_SUPPORT) != 0U)
     {
         if(topic == getBaseTopic() + "preset_mode/set")
         {
-            m_control_cb(HvacSupportedFeatures::PRESET_SUPPORT, payloadJson["preset_mode"].get<std::string>());
+            m_control_cb(HvacSupportedFeatures::PRESET_SUPPORT, value);
         }
     }
 }
@@ -284,55 +292,67 @@ void HvacFunction::sendFunctionStatus(const HvacSupportedFeatures& feature) cons
         return;
     }
 
-    if(feature == HvacSupportedFeatures::TEMPERATURE)
+    if(feature == HvacSupportedFeatures::TEMPERATURE && (m_supported_features & HvacSupportedFeatures::TEMPERATURE) != 0U)
     {
         json payload;
         payload["temperature"] = m_temperature;
         parent->publishMessage(getBaseTopic() + "temperature/measured", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING)
+    if(feature == HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING &&
+       (m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING) != 0U)
     {
         json payload;
-        payload["heating_temperature_setpoint"] = m_heating_setpoint;
+        payload["value"] = m_heating_setpoint;
         parent->publishMessage(getBaseTopic() + "heating_temperature/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING)
+    if(feature == HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING &&
+       (m_supported_features & HvacSupportedFeatures::TEMPERATURE_CONTROL_COOLING) != 0U)
     {
         json payload;
-        payload["cooling_temperature_setpoint"] = m_cooling_setpoint;
+        payload["value"] = m_cooling_setpoint;
         parent->publishMessage(getBaseTopic() + "cooling_temperature/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::HUMIDITY)
+    if(feature == HvacSupportedFeatures::HUMIDITY && (m_supported_features & HvacSupportedFeatures::HUMIDITY) != 0U)
     {
         json payload;
         payload["humidity"] = m_humidity;
         parent->publishMessage(getBaseTopic() + "humidity/measured", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::HUMIDITY_CONTROL)
+    if(feature == HvacSupportedFeatures::HUMIDITY_CONTROL &&
+       (m_supported_features & HvacSupportedFeatures::HUMIDITY_CONTROL) != 0U)
     {
         json payload;
-        payload["humidity_setpoint"] = m_humidity_setpoint;
+        payload["value"] = m_humidity_setpoint;
         parent->publishMessage(getBaseTopic() + "humidity/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::FAN_MODE)
+    if(feature == HvacSupportedFeatures::FAN_MODE && (m_supported_features & HvacSupportedFeatures::FAN_MODE) != 0U)
     {
         json payload;
-        payload["fan_mode"] = m_fan_mode;
+        payload["value"] = m_fan_mode;
         parent->publishMessage(getBaseTopic() + "fan_mode/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::SWING_MODE)
+    if(feature == HvacSupportedFeatures::SWING_MODE && (m_supported_features & HvacSupportedFeatures::SWING_MODE) != 0U)
     {
         json payload;
-        payload["swing_mode"] = m_swing_mode;
+        payload["value"] = m_swing_mode;
         parent->publishMessage(getBaseTopic() + "swing_mode/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::MODE_CONTROL)
+    if(feature == HvacSupportedFeatures::MODE_CONTROL &&
+       (m_supported_features & HvacSupportedFeatures::MODE_CONTROL) != 0U)
     {
         json payload;
-        payload["mode"] = m_device_mode;
+        payload["value"] = m_device_mode;
         parent->publishMessage(getBaseTopic() + "mode/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::ACTION)
+    if(feature == HvacSupportedFeatures::ACTION && (m_supported_features & HvacSupportedFeatures::ACTION) != 0U)
     {
         json payload;
         switch(m_action)
@@ -356,17 +376,21 @@ void HvacFunction::sendFunctionStatus(const HvacSupportedFeatures& feature) cons
                 payload["action"] = "fan";
                 break;
             default:
-                payload["action"] = "";
+                payload["action"] = nullptr;
                 break;
         }
         parent->publishMessage(getBaseTopic() + "action/state", payload);
+        return;
     }
-    if(feature == HvacSupportedFeatures::PRESET_SUPPORT)
+    if(feature == HvacSupportedFeatures::PRESET_SUPPORT &&
+       (m_supported_features & HvacSupportedFeatures::PRESET_SUPPORT) != 0U)
     {
         json payload;
-        payload["preset_mode"] = m_preset_mode;
+        payload["value"] = m_preset_mode;
         parent->publishMessage(getBaseTopic() + "preset_mode/state", payload);
+        return;
     }
+    LOG_WARN("Feature {} is not supported for this hvac function", feature);
 }
 
 void HvacFunction::updateTemperature(double temperature, bool send_status)
@@ -467,6 +491,25 @@ void HvacFunction::updateSwingMode(const std::string& swing_mode, bool send_stat
     }
 }
 
+void HvacFunction::updatePowerState(bool power, bool send_status)
+{
+    if((m_supported_features & HvacSupportedFeatures::POWER_CONTROL) == 0U)
+    {
+        LOG_ERROR("Device mode is not supported for this hvac function.");
+        return;
+    }
+    m_power = power;
+    if(!m_power)
+    {
+        m_device_mode_last = m_device_mode;
+    }
+    m_device_mode = m_power ? m_device_mode_last : "off";
+    if(send_status)
+    {
+        sendFunctionStatus(HvacSupportedFeatures::MODE_CONTROL);
+    }
+}
+
 void HvacFunction::updateDeviceMode(const std::string& device_mode, bool send_status)
 {
     if((m_supported_features & HvacSupportedFeatures::MODE_CONTROL) == 0U)
@@ -475,6 +518,7 @@ void HvacFunction::updateDeviceMode(const std::string& device_mode, bool send_st
         return;
     }
     m_device_mode = device_mode;
+    m_power = m_device_mode != "off";
     if(send_status)
     {
         sendFunctionStatus(HvacSupportedFeatures::MODE_CONTROL);
