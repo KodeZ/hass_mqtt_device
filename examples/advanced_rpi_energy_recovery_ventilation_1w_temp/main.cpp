@@ -60,12 +60,12 @@ const int SPEED_MED_HIGH = 23;        // Medium-High speed (if not Low on CH2)
 const int RECOVER_ROTOR_POSITION = 3; // Input from shifter
 const std::vector<std::string> DEVICE_MODES = {"cool", "heat"};
 const std::vector<std::string> FAN_MODES = {"low", "medium", "high"};
-const std::map<std::string, std::string> temp_sensors = {{"Incoming", "28-000004d00985"},
-                                                         {"Outgoing", "28-000004d0531f"},
-                                                         {"In/out 1", "28-000004ef1f39"},
+const std::map<std::string, std::string> temp_sensors = {{"from_house", "28-000004d00985"},
+                                                         {"to_house", "28-000004ef1f39"},
+                                                         {"In/out 1", "28-0621b47f1183"},
                                                          {"In/out 2", "28-000004ef81bd"}};
-std::map<std::string, double> temp_temperatures = {{"Incoming", NAN},
-                                                   {"Outgoing", NAN},
+std::map<std::string, double> temp_temperatures = {{"from_house", NAN},
+                                                   {"to_house", NAN},
                                                    {"In/out 1", NAN},
                                                    {"In/out 2", NAN}};
 
@@ -219,6 +219,7 @@ void tempReadingLoop()
                         }
                     }
                 }
+                has_read_temp = true;
             }
             else
             {
@@ -226,7 +227,6 @@ void tempReadingLoop()
             }
         }
         // Sleep for 10 seconds
-        has_read_temp = true;
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
     LOG_DEBUG("Ending thread");
@@ -410,8 +410,8 @@ int main(int argc, char* argv[])
         {
             has_read_temp = false;
             ventilator->getFunction()->updateTemperature(temp_temperatures[temp_sensors.at("Outgoing")]);
-            incoming_temp->update(temp_temperatures[temp_sensors.at("Incoming")]);
-            outgoing_temp->update(temp_temperatures[temp_sensors.at("Outgoing")]);
+            incoming_temp->update(temp_temperatures[temp_sensors.at("from_house")]);
+            outgoing_temp->update(temp_temperatures[temp_sensors.at("to_house")]);
             io1_temp->update(temp_temperatures[temp_sensors.at("In/out 1")]);
             io2_temp->update(temp_temperatures[temp_sensors.at("In/out 2")]);
         }
