@@ -1,0 +1,7 @@
+{
+    "ip": "10.1.1.21",
+    "port": 1883,
+    "username": "mqtt",
+    "password": "mqtt",
+    "status_file": "/tmp/mqtt_status"
+}

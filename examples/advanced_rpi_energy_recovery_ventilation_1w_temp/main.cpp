@@ -60,10 +60,10 @@ const int SPEED_MED_HIGH = 23;        // Medium-High speed (if not Low on CH2)
 const int RECOVER_ROTOR_POSITION = 3; // Input from shifter
 const std::vector<std::string> DEVICE_MODES = {"cool", "heat"};
 const std::vector<std::string> FAN_MODES = {"low", "medium", "high"};
-const std::map<std::string, std::string> temp_sensors = {{"Incoming", "28-000004d00985" },
-                                                         {"Outgoing", "28-000004d0531f" },
-                                                         {"In/out 1", "28-000004ef1f39" },
-                                                         {"In/out 2", "28-000004ef81bd" }};
+const std::map<std::string, std::string> temp_sensors = {{"Incoming", "28-000004d00985"},
+                                                         {"Outgoing", "28-000004d0531f"},
+                                                         {"In/out 1", "28-000004ef1f39"},
+                                                         {"In/out 2", "28-000004ef81bd"}};
 std::map<std::string, double> temp_temperatures = {{"Incoming", NAN},
                                                    {"Outgoing", NAN},
                                                    {"In/out 1", NAN},
@@ -94,6 +94,7 @@ void setFanSpeed(std::string speed)
     }
 }
 
+bool changed = false;
 void controlStateCallback(std::shared_ptr<HvacFunction> function, HvacSupportedFeatures feature, std::string value)
 {
     switch(feature)
@@ -102,16 +103,28 @@ void controlStateCallback(std::shared_ptr<HvacFunction> function, HvacSupportedF
             LOG_INFO("Power control: {}", value);
             if(value == "heat")
             {
+                if(!recovery_enabled)
+                {
+                    changed = true;
+                }
                 recovery_enabled = true;
                 function->updateDeviceMode("heat");
             }
             else
             {
+                if(recovery_enabled)
+                {
+                    changed = true;
+                }
                 recovery_enabled = false;
                 function->updateDeviceMode("cool");
             }
             break;
         case HvacSupportedFeatures::FAN_MODE:
+            if(function->getFanMode() != value)
+            {
+                changed = true;
+            }
             setFanSpeed(value);
             function->updateFanMode(value);
             break;
@@ -234,22 +247,80 @@ int main(int argc, char* argv[])
     }
     INIT_LOGGER(debug);
 
-    // Check and read the arguments
-    if(argc < 5)
+    std::string ip;
+    int port = 0;
+    std::string username;
+    std::string password;
+
+    // Read the config file if there is one
+    LOG_DEBUG("Reading config file");
+
+    nlohmann::json config;
+    std::ifstream config_file("/etc/hass_mqtt.json");
+    if(!config_file.is_open())
     {
-        std::cout << "Usage: " << argv[0] << " <ip> <port> <username> <password> [-d]" << std::endl;
-        return 1;
+        LOG_INFO("Could not open /etc/hass_mqtt.json");
     }
-    std::string ip = argv[1];
-    int port = std::stoi(argv[2]);
-    std::string username = argv[3];
-    std::string password = argv[4];
+    else
+    {
+        try
+        {
+            LOG_DEBUG("Parsing JSON");
+            config = nlohmann::json::parse(config_file);
+            ip = config["ip"].get<std::string>();
+            port = config["port"].get<int>();
+            username = config["username"].get<std::string>();
+            password = config["password"].get<std::string>();
+        }
+        catch(const nlohmann::json::exception& e)
+        {
+            LOG_ERROR("Error parsing JSON: {}", e.what());
+        }
+    }
+    config_file.close();
+
+    // Check and read the arguments
+    if(argc >= 5)
+    {
+        std::string ip = argv[1];
+        int port = std::stoi(argv[2]);
+        std::string username = argv[3];
+        std::string password = argv[4];
+    }
+
+    LOG_DEBUG("Parameters: ip: {}, port: {}, username: {}, password: {}", ip, port, username, password);
+
+    std::string start_mode = "heat";
+    std::string start_fan_mode = "low";
+    if(config.find("status_file") != config.end())
+    {
+        LOG_DEBUG("Reading status file");
+        // If there is not a setting for status_file, we just ignore it
+        auto status_file_name = config.at("status_file").get<std::string>();
+        try
+        {
+            std::ifstream status_file(status_file_name);
+            if(status_file.good())
+            {
+                int i = 0;
+                status_file >> start_mode;
+                status_file >> start_fan_mode;
+                status_file.close();
+            }
+            else
+            {
+                std::cerr << "Could not open status file" << std::endl;
+            }
+        }
+        catch(const std::ifstream::failure& e)
+        {
+            LOG_ERROR("Error parsing JSON: {}", e.what());
+        }
+    }
 
 #ifdef __arm__
     wiringPiSetup();
 #endif
-
-    // Read the status file
 
     // Start the threads
     std::thread recovery_thread(recoveryRotorThread);
@@ -272,21 +343,21 @@ int main(int argc, char* argv[])
     unique_id += "_rpi_energy_recovery_ventilation";
 
     // Create the ventilator device
-    auto ventilator = std::make_shared<HvacDevice>("house_ventilation", unique_id+"_hvac");
+    auto ventilator = std::make_shared<HvacDevice>("house_ventilation", unique_id + "_hvac");
     ventilator->init([ventilator](HvacSupportedFeatures feature,
-                  std::string value) { controlStateCallback(ventilator->getFunction(), feature, value); },
-             HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::FAN_MODE | HvacSupportedFeatures::MODE_CONTROL,
-             DEVICE_MODES,
-             FAN_MODES,
-             {},
-             {});
-
+                                  std::string value) { controlStateCallback(ventilator->getFunction(), feature, value); },
+                     HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::FAN_MODE |
+                         HvacSupportedFeatures::MODE_CONTROL,
+                     DEVICE_MODES,
+                     FAN_MODES,
+                     {},
+                     {});
 
     // Create the temperature sensors
-    auto incoming_temp = std::make_shared<TemperatureSensorDevice>("incoming_air_temp", unique_id+"_temp");
-    auto outgoing_temp = std::make_shared<TemperatureSensorDevice>("outgoing_air_temp", unique_id+"_temp");
-    auto io1_temp = std::make_shared<TemperatureSensorDevice>("io1_air_temp", unique_id+"_temp");
-    auto io2_temp = std::make_shared<TemperatureSensorDevice>("io2_air_temp", unique_id+"_temp");
+    auto incoming_temp = std::make_shared<TemperatureSensorDevice>("incoming_air_temp", unique_id + "_temp");
+    auto outgoing_temp = std::make_shared<TemperatureSensorDevice>("outgoing_air_temp", unique_id + "_temp");
+    auto io1_temp = std::make_shared<TemperatureSensorDevice>("io1_air_temp", unique_id + "_temp");
+    auto io2_temp = std::make_shared<TemperatureSensorDevice>("io2_air_temp", unique_id + "_temp");
     // Init the sensors
     incoming_temp->init();
     outgoing_temp->init();
@@ -319,6 +390,19 @@ int main(int argc, char* argv[])
         // If we have been running for 2 minutes, save the state (if changed)
         if(loop_count % (2 * 60 * (1000 / tick_size_ms)) == 0)
         {
+            LOG_DEBUG("Saving state");
+            auto status_file_name = config.at("status_file").get<std::string>();
+            std::ofstream status_file(status_file_name);
+            if(status_file.good())
+            {
+                status_file << ventilator->getFunction()->getDeviceMode() << std::endl;
+                status_file << ventilator->getFunction()->getFanMode() << std::endl;
+                status_file.close();
+            }
+            else
+            {
+                std::cerr << "Could not open status file" << std::endl;
+            }
         }
 
         // Update the temperature

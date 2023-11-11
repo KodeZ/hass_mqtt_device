@@ -189,6 +189,125 @@ public:
      */
     void updatePresetMode(const std::string& preset_mode, bool send_status = true);
 
+    /**
+     * @brief Get the temperature measured by the device
+     *
+     * @return The temperature measured by the device
+     */
+    [[nodiscard]] double getTemperature() const { return m_temperature; }
+
+    /**
+     * @brief Get the heating setpoint of the device
+     *
+     * @return The heating setpoint of the device
+     */
+    [[nodiscard]] double getHeatingSetpoint() const { return m_heating_setpoint; }
+
+    /**
+     * @brief Get the cooling setpoint of the device
+     *
+     * @return The cooling setpoint of the device
+     */
+    [[nodiscard]] double getCoolingSetpoint() const { return m_cooling_setpoint; }
+
+    /**
+     * @brief Get the humidity measured by the device
+     *
+     * @return The humidity measured by the device
+     */
+    [[nodiscard]] double getHumidity() const { return m_humidity; }
+
+    /**
+     * @brief Get the humidity setpoint of the device
+     *
+     * @return The humidity setpoint of the device
+     */
+    [[nodiscard]] double getHumiditySetpoint() const { return m_humidity_setpoint; }
+
+    /**
+     * @brief Get the fan mode of the device
+     *
+     * @return The fan mode of the device
+     */
+    [[nodiscard]] std::string getFanMode() const { return m_fan_mode; }
+
+    /**
+     * @brief Get the swing mode of the device
+     *
+     * @return The swing mode of the device
+     */
+    [[nodiscard]] std::string getSwingMode() const { return m_swing_mode; }
+
+    /**
+     * @brief Get the device mode of the device
+     *
+     * @return The device mode of the device
+     */
+    [[nodiscard]] std::string getDeviceMode() const { return m_device_mode; }
+
+    /**
+     * @brief Get the power state of the device
+     *
+     * @return The power state of the device
+     */
+    [[nodiscard]] bool getPowerState() const { return m_power; }
+
+    /**
+     * @brief Get the action state of the device
+     *
+     * @return The action state of the device
+     */
+    [[nodiscard]] HvacAction getAction() const { return m_action; }
+
+    /**
+     * @brief Get the preset mode of the device
+     *
+     * @return The preset mode of the device
+     */
+    [[nodiscard]] std::string getPresetMode() const { return m_preset_mode; }
+
+    /**
+     * @brief Get the supported features of the device
+     *
+     * @return The supported features of the device
+     */
+    [[nodiscard]] unsigned getSupportedFeatures() const { return m_supported_features; }
+
+    /**
+     * @brief Get the supported device modes of the device
+     *
+     * @return The supported device modes of the device
+     */
+    [[nodiscard]] std::vector<std::string> getDeviceModes() const { return m_device_modes; }
+
+    /**
+     * @brief Get the supported fan modes of the device
+     *
+     * @return The supported fan modes of the device
+     */
+    [[nodiscard]] std::vector<std::string> getFanModes() const { return m_fan_modes; }
+
+    /**
+     * @brief Get the supported swing modes of the device
+     *
+     * @return The supported swing modes of the device
+     */
+    [[nodiscard]] std::vector<std::string> getSwingModes() const { return m_swing_modes; }
+
+    /**
+     * @brief Get the supported preset modes of the device
+     *
+     * @return The supported preset modes of the device
+     */
+    [[nodiscard]] std::vector<std::string> getPresetModes() const { return m_preset_modes; }
+
+    /**
+     * @brief Get the last device mode of the device
+     *
+     * @return The last device mode of the device
+     */
+    [[nodiscard]] std::string getLastDeviceMode() const { return m_device_mode_last; }
+
 private:
 protected:
     /**
