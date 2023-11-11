@@ -7,8 +7,12 @@
 /**
  * This example shows how to create a device advanced device with for a rpi
  * with relays. The example assumes that the following product is used, but is
- * easily modified: https://smile.amazon.com/gp/product/B07JF4D814 The board has
- * a silly pinout connectivity, so we need a translation table for the relays.
+ * easily modified: https://smile.amazon.com/gp/product/B07JF4D814
+ *
+ * This example shows a hvac device used for a balanced ventilation system with
+ * heat recovery. The device should be automatically discovered by Home Assistant.
+ * It also includes 4 temperature sensors that on the rPi should be connected in
+ * the usual 1-wire way.
  *
  * This example requires the wiringPi library to be installed. On raspian do:
  * sudo apt-get install wiringpi
@@ -16,6 +20,7 @@
 
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/devices/hvac.h"
+#include "hass_mqtt_device/devices/temp_sensor.h"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include "math.h"
 
@@ -59,7 +64,10 @@ const std::map<std::string, std::string> temp_sensors = {{"Incoming", "28-000004
                                                          {"Outgoing", "28-000004d0531f" },
                                                          {"In/out 1", "28-000004ef1f39" },
                                                          {"In/out 2", "28-000004ef81bd" }};
-std::map<std::string, double> temp_temperatures;
+std::map<std::string, double> temp_temperatures = {{"Incoming", NAN},
+                                                   {"Outgoing", NAN},
+                                                   {"In/out 1", NAN},
+                                                   {"In/out 2", NAN}};
 
 // Set fan speeds
 void setFanSpeed(std::string speed)
@@ -263,25 +271,41 @@ int main(int argc, char* argv[])
     }
     unique_id += "_rpi_energy_recovery_ventilation";
 
-    auto sw = std::make_shared<HvacDevice>("advanced_energy_recovery_ventilation", unique_id);
-
-    sw->init([sw](HvacSupportedFeatures feature,
-                  std::string value) { controlStateCallback(sw->getFunction(), feature, value); },
+    // Create the ventilator device
+    auto ventilator = std::make_shared<HvacDevice>("house_ventilation", unique_id+"_hvac");
+    ventilator->init([ventilator](HvacSupportedFeatures feature,
+                  std::string value) { controlStateCallback(ventilator->getFunction(), feature, value); },
              HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::FAN_MODE | HvacSupportedFeatures::MODE_CONTROL,
              DEVICE_MODES,
              FAN_MODES,
              {},
              {});
 
+
+    // Create the temperature sensors
+    auto incoming_temp = std::make_shared<TemperatureSensorDevice>("incoming_air_temp", unique_id+"_temp");
+    auto outgoing_temp = std::make_shared<TemperatureSensorDevice>("outgoing_air_temp", unique_id+"_temp");
+    auto io1_temp = std::make_shared<TemperatureSensorDevice>("io1_air_temp", unique_id+"_temp");
+    auto io2_temp = std::make_shared<TemperatureSensorDevice>("io2_air_temp", unique_id+"_temp");
+    // Init the sensors
+    incoming_temp->init();
+    outgoing_temp->init();
+    io1_temp->init();
+    io2_temp->init();
+
     // Create the connector
     auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
 
     // Create the device
-    connector->registerDevice(sw);
+    connector->registerDevice(ventilator);
+    connector->registerDevice(incoming_temp);
+    connector->registerDevice(outgoing_temp);
+    connector->registerDevice(io1_temp);
+    connector->registerDevice(io2_temp);
     connector->connect();
 
-    sw->getFunction()->updateDeviceMode("heat");
-    sw->getFunction()->updateFanMode("low");
+    ventilator->getFunction()->updateDeviceMode("heat");
+    ventilator->getFunction()->updateFanMode("low");
 
     // Run the device
     // Here we loop forever, and basically handle incoming messages and update
@@ -295,6 +319,17 @@ int main(int argc, char* argv[])
         // If we have been running for 2 minutes, save the state (if changed)
         if(loop_count % (2 * 60 * (1000 / tick_size_ms)) == 0)
         {
+        }
+
+        // Update the temperature
+        if(has_read_temp)
+        {
+            has_read_temp = false;
+            ventilator->getFunction()->updateTemperature(temp_temperatures[temp_sensors.at("Outgoing")]);
+            incoming_temp->update(temp_temperatures[temp_sensors.at("Incoming")]);
+            outgoing_temp->update(temp_temperatures[temp_sensors.at("Outgoing")]);
+            io1_temp->update(temp_temperatures[temp_sensors.at("In/out 1")]);
+            io2_temp->update(temp_temperatures[temp_sensors.at("In/out 2")]);
         }
 
         // Process messages from the MQTT server for 1 second

@@ -105,7 +105,7 @@ void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device)
         disconnect();
         connect();
     }
-    LOG_DEBUG("Device registered");
+    LOG_DEBUG("Device registered with name: {}", device->getName());
 }
 
 // Unregister a device
@@ -265,11 +265,14 @@ void MQTTConnector::connectCallback(mosquitto* mosq, void* obj, int rc)
     }
 
     // Send the discovery messages for the registered devices
+    LOG_DEBUG("Sending discovery messages for {} devices", connector->m_registered_devices.size());
     for(auto& device : connector->m_registered_devices)
     {
+        LOG_DEBUG("Sending discovery for device: {}", device->getName());
         device->sendDiscovery();
         device->sendStatus();
     }
+    LOG_DEBUG("Discovery messages sent for {} devices", connector->m_registered_devices.size());
 
     connector->m_is_connected = true;
 }

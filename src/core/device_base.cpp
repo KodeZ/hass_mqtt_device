@@ -53,7 +53,8 @@ std::vector<std::string> DeviceBase::getSubscribeTopics() const
 
 void DeviceBase::registerFunction(std::shared_ptr<FunctionBase> function)
 {
-    // Check if the function wit the same discovery topic already exists
+    // Check if the function with the same discovery topic already exists
+    LOG_DEBUG("Registering function with name {}", function->getName());
     for(auto& existingFunction : m_functions)
     {
         if(existingFunction->getName() == function->getName())
@@ -83,9 +84,11 @@ std::shared_ptr<FunctionBase> DeviceBase::findFunction(const std::string& name) 
 void DeviceBase::sendDiscovery()
 {
     // Loop through all functions and gather their discovery parts
+    LOG_DEBUG("Sending discovery for device: {}", m_device_name);
     std::map<std::string, json> discoveryParts;
     for(auto& function : m_functions)
     {
+        LOG_DEBUG("Sending discovery for function {}", function->getName());
         auto discoveryTopic = function->getDiscoveryTopic();
         auto discoveryJson = function->getDiscoveryJson();
         // Check if the discovery topic already exists, throw an error if it does

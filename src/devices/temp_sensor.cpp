@@ -25,6 +25,7 @@ TemperatureSensorDevice::TemperatureSensorDevice(const std::string& device_name,
 
 void TemperatureSensorDevice::init()
 {
+    LOG_DEBUG("Initializing temperature sensor device");
     SensorAttributes attributes;
     attributes.unit_of_measurement = "°C";
     attributes.device_class = "temperature";
