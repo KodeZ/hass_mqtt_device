@@ -51,6 +51,8 @@ json SwitchFunction::getDiscoveryJson() const
     discoveryJson["name"] = getName();
     discoveryJson["unique_id"] = getId();
     // On/off
+    discoveryJson["payload_on"] = R"({"value":"ON"})";
+    discoveryJson["payload_off"] = R"({"value":"OFF"})";
     discoveryJson["state_topic"] = getBaseTopic() + "state";
     discoveryJson["command_topic"] = getBaseTopic() + "set";
 
@@ -81,7 +83,7 @@ void SwitchFunction::processMessage(const std::string& topic, const std::string&
     }
 
     // Handle the sub topics
-    m_control_cb(payloadJson["state"] == "ON");
+    m_control_cb(payloadJson["value"] == "ON");
 }
 
 void SwitchFunction::sendStatus() const
@@ -93,7 +95,7 @@ void SwitchFunction::sendStatus() const
     }
 
     json payload;
-    payload["state"] = m_state ? "ON" : "OFF";
+    payload["value"] = m_state ? "ON" : "OFF";
     parent->publishMessage(getBaseTopic() + "state", payload);
 }
 
