@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     unique_id += "_simple_on_off_light_multiple_devices";
 
     // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
 
     // Create the devices
     for(int i = 0; i < _device_count; i++)
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         std::string device_name = _device_name_prefix + std::to_string(i);
         // By using lambda and capturing the value of i, we can create multiple
         // devices with different callbacks in a loop
-        auto light = std::make_shared<OnOffLightDevice>(device_name, unique_id, [i](bool state) {
+        auto light = std::make_shared<OnOffLightDevice>(device_name, [i](bool state) {
             controlStateCallback(i, state);
         });
         light->init();

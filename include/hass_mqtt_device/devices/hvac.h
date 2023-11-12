@@ -24,7 +24,7 @@ public:
      * @param device_name The name of the device
      * @param unique_id The unique id of the device
      */
-    HvacDevice(const std::string& device_name, const std::string& unique_id);
+    HvacDevice(const std::string& device_name, const std::string& unique_id = "");
 
     /**
      * @brief Implement init function for this device

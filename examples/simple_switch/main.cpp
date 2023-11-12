@@ -77,10 +77,10 @@ int main(int argc, char* argv[])
     unique_id += "_simple_switch";
 
     // Create the device
-    auto sw = std::make_shared<SwitchDevice>("simple_switch_example", unique_id, controlStateCallback);
+    auto sw = std::make_shared<SwitchDevice>("simple_switch_example", controlStateCallback);
     sw->init();
 
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
     connector->registerDevice(sw);
     connector->connect();
 

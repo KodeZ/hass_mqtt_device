@@ -38,7 +38,7 @@ std::string DimmableLightFunction::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/light/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/light/" + parent->getFullId() + "/" + getCleanName() + "/config";
 }
 
 json DimmableLightFunction::getDiscoveryJson() const

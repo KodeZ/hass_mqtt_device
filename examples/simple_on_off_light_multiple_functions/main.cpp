@@ -88,10 +88,10 @@ int main(int argc, char* argv[])
     }
 
     // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
 
     // Create the device
-    auto light = std::make_shared<DeviceBase>("simple_on_off_light_multiple_functions", unique_id);
+    auto light = std::make_shared<DeviceBase>("simple_on_off_light_multiple_functions");
 
     for(int i = 0; i < _function_count; i++)
     {

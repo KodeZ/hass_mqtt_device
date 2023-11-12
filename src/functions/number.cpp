@@ -52,7 +52,7 @@ std::string NumberFunction::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/number/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/number/" + parent->getFullId() + "/" + getCleanName() + "/config";
 }
 
 json NumberFunction::getDiscoveryJson() const

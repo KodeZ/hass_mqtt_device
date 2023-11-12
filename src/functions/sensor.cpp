@@ -39,7 +39,7 @@ std::string SensorFunction<T>::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/sensor/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/sensor/" + parent->getFullId() + "/" + getCleanName() + "/config";
 }
 
 template<typename T>
@@ -61,6 +61,10 @@ json SensorFunction<T>::getDiscoveryJson() const
 template<typename T>
 void SensorFunction<T>::sendStatus() const
 {
+    if(!m_has_data)
+    {
+        return;
+    }
     auto parent = m_parent_device.lock();
     if(!parent)
     {
@@ -75,6 +79,7 @@ void SensorFunction<T>::sendStatus() const
 template<typename T>
 void SensorFunction<T>::update(T value)
 {
+    m_has_data = true;
     m_value = value;
     sendStatus();
 }

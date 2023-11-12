@@ -54,6 +54,13 @@ public:
     std::string getName() const;
 
     /**
+     * @brief Get a clean version of the name of this function
+     *
+     * @return A cleaned up name of this function
+     */
+    std::string getCleanName() const;
+
+    /**
      * @brief Get the unique ID of this function
      *
      * @return The name of this function

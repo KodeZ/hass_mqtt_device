@@ -25,7 +25,7 @@ public:
      * @param unique_id The unique id of the device
      * @param control_cb The callback to call when receiving a control message
      */
-    NumberDevice(const std::string& device_name, const std::string& unique_id, std::function<void(double)> control_cb);
+    NumberDevice(const std::string& device_name, std::function<void(double)> control_cb, const std::string& unique_id = "");
 
     /**
      * @brief Implement init function for this device

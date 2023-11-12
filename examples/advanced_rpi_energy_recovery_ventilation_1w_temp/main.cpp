@@ -18,9 +18,11 @@
  * sudo apt-get install wiringpi
  */
 
+#include "hass_mqtt_device/core/device_base.h"
 #include "hass_mqtt_device/core/mqtt_connector.h"
 #include "hass_mqtt_device/devices/hvac.h"
-#include "hass_mqtt_device/devices/temp_sensor.h"
+#include "hass_mqtt_device/functions/sensor.h"
+#include "hass_mqtt_device/functions/sensor_attributes_factory.hpp"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include "math.h"
 
@@ -53,21 +55,22 @@ const int tick_size_ms = 1000;
 
 bool stop_threads = false;
 bool recovery_enabled = true;
-const int ROTATION_DELAY = 10;        // Seconds
+const int ROTATION_DELAY = 45;        // Seconds
 const int RECOVER_ROTOR = 21;         // Recovery output
 const int SPEED_LOW = 22;             // Low-other speed
 const int SPEED_MED_HIGH = 23;        // Medium-High speed (if not Low on CH2)
 const int RECOVER_ROTOR_POSITION = 3; // Input from shifter
 const std::vector<std::string> DEVICE_MODES = {"cool", "heat"};
 const std::vector<std::string> FAN_MODES = {"low", "medium", "high"};
-const std::map<std::string, std::string> temp_sensors = {{"from_house", "28-000004d00985"},
-                                                         {"to_house", "28-000004ef1f39"},
-                                                         {"In/out 1", "28-0621b47f1183"},
-                                                         {"In/out 2", "28-000004ef81bd"}};
-std::map<std::string, double> temp_temperatures = {{"from_house", NAN},
-                                                   {"to_house", NAN},
-                                                   {"In/out 1", NAN},
-                                                   {"In/out 2", NAN}};
+
+const std::map<std::string, std::string> temp_sensors = {{"28-000004d00985", "From house"},
+                                                         {"28-000004ef1f39", "To house"},
+                                                         {"28-0621b47f1183", "In/out 1"},
+                                                         {"28-000004ef81bd", "In/out 2"}};
+std::map<std::string, double> temp_temperatures = {{"From house", 20},
+                                                   {"To house", 21.1},
+                                                   {"In/out 1", 10},
+                                                   {"In/out 2", 9.9}};
 
 // Set fan speeds
 void setFanSpeed(std::string speed)
@@ -138,22 +141,18 @@ void controlStateCallback(std::shared_ptr<HvacFunction> function, HvacSupportedF
 // don't need it, but rather should just turn on/off an output.
 void recoveryRotorThread()
 {
-    LOG_INFO("Starting recovery rotor thread");
+    LOG_DEBUG("Starting recovery rotor thread");
     int second_counter = 0;
     while(!stop_threads)
     {
         if(!recovery_enabled)
         {
+            LOG_DEBUG("Cooling mode");
             std::this_thread::sleep_for(std::chrono::seconds(1));
             continue;
         }
 
-        if(++second_counter <= ROTATION_DELAY)
-        {
-            continue;
-        }
-        second_counter = 0;
-
+        LOG_DEBUG("Starting recovery rotor rotation");
         // Start recovery rotation
         digitalWrite(RECOVER_ROTOR, false);
         while(digitalRead(RECOVER_ROTOR_POSITION) == false)
@@ -169,6 +168,8 @@ void recoveryRotorThread()
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         digitalWrite(RECOVER_ROTOR, true);
+        LOG_DEBUG("Ending recovery rotor rotation");
+
         // Sleep for the alotted time
         std::this_thread::sleep_for(std::chrono::seconds(ROTATION_DELAY));
     }
@@ -179,57 +180,64 @@ bool has_read_temp = false;
 // Temperature reading thread
 void tempReadingLoop()
 {
-    LOG_DEBUG("Starting temp sensor thread");
+    LOG_INFO("Starting temp sensor thread");
     const std::string base_path = "/sys/bus/w1/devices";
     int temp_read_counter = 0;
     int valve_control_counter = 0;
     while(!stop_threads)
     {
-        if(++temp_read_counter % 100 == 0) // Loop this for 20 seconds
+        if(std::filesystem::is_directory(base_path))
         {
-            if(std::filesystem::is_directory(base_path))
+            LOG_DEBUG("Reading files");
+            std::list<std::string> paths;
+            // List all sensors
+            for(const auto& entry : std::filesystem::directory_iterator(base_path))
             {
-                LOG_DEBUG("Reading files");
-                std::list<std::string> paths;
-                // List all sensors
-                for(const auto& entry : std::filesystem::directory_iterator(base_path))
+                if(!stop_threads && std::filesystem::is_directory(entry.path()) &&
+                   std::filesystem::is_regular_file(entry.path() / "temperature"))
                 {
-                    if(!stop_threads && std::filesystem::is_directory(entry.path()) &&
-                       std::filesystem::is_regular_file(entry.path() / "temperature"))
+                    // Get sensor id
+                    if(entry.path().end() != entry.path().begin())
                     {
-                        // Get sensor id
-                        if(entry.path().end() != entry.path().begin())
+                        std::string sensor = *std::prev(entry.path().end());
+                        // Read sensor values and store
+                        std::ifstream infile(entry.path() / "temperature");
+                        double temp = NAN;
+                        infile >> temp;
+                        if(infile.good())
                         {
-                            std::string sensor = *std::prev(entry.path().end());
-                            // Read sensor values and store
-                            std::ifstream infile(entry.path() / "temperature");
-                            double temp = NAN;
-                            infile >> temp;
-                            if(infile.good())
+                            temp /= 1000;
+                            if(temp == 85)
                             {
-                                temp /= 1000;
-                                if(temp == 85)
-                                {
-                                    LOG_ERROR("Failed to read temperature from {}", sensor);
-                                    continue;
-                                }
-                                temp_temperatures[sensor] = temp;
-                                LOG_DEBUG("Sensor: {} Temp: {}", sensor, temp);
+                                LOG_ERROR("Failed to read temperature from {}", sensor);
+                                continue;
                             }
+                            auto sensor_name = temp_sensors.find(sensor);
+                            if(sensor_name == temp_sensors.end())
+                            {
+                                LOG_WARN("Unknown sensor {}", sensor);
+                                continue;
+                            }
+                            temp_temperatures[sensor_name->second] = temp;
+                            LOG_DEBUG("Sensor: {} Temp: {}", sensor, temp);
                         }
                     }
                 }
-                has_read_temp = true;
             }
-            else
-            {
-                LOG_DEBUG("No 1w directory exist");
-            }
+        }
+        else
+        {
+            LOG_DEBUG("No 1w directory exist");
+        }
+        // Give the system 30 seconds to create the 1W system folder before sending default data
+        if(temp_read_counter++ > 3)
+        {
+            has_read_temp = true;
         }
         // Sleep for 10 seconds
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
-    LOG_DEBUG("Ending thread");
+    LOG_INFO("Ending thread");
 }
 
 // The main function.
@@ -309,7 +317,7 @@ int main(int argc, char* argv[])
             }
             else
             {
-                std::cerr << "Could not open status file" << std::endl;
+                LOG_WARN("Could not open status file to read start values {}", status_file_name);
             }
         }
         catch(const std::ifstream::failure& e)
@@ -342,8 +350,11 @@ int main(int argc, char* argv[])
     }
     unique_id += "_rpi_energy_recovery_ventilation";
 
+    // Create the connector
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
+
     // Create the ventilator device
-    auto ventilator = std::make_shared<HvacDevice>("house_ventilation", unique_id + "_hvac");
+    auto ventilator = std::make_shared<HvacDevice>("House ventilation", "hvac");
     ventilator->init([ventilator](HvacSupportedFeatures feature,
                                   std::string value) { controlStateCallback(ventilator->getFunction(), feature, value); },
                      HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::FAN_MODE |
@@ -352,31 +363,23 @@ int main(int argc, char* argv[])
                      FAN_MODES,
                      {},
                      {});
+    connector->registerDevice(ventilator);
 
     // Create the temperature sensors
-    auto incoming_temp = std::make_shared<TemperatureSensorDevice>("incoming_air_temp", unique_id + "_temp");
-    auto outgoing_temp = std::make_shared<TemperatureSensorDevice>("outgoing_air_temp", unique_id + "_temp");
-    auto io1_temp = std::make_shared<TemperatureSensorDevice>("io1_air_temp", unique_id + "_temp");
-    auto io2_temp = std::make_shared<TemperatureSensorDevice>("io2_air_temp", unique_id + "_temp");
-    // Init the sensors
-    incoming_temp->init();
-    outgoing_temp->init();
-    io1_temp->init();
-    io2_temp->init();
+    auto temperatures = std::make_shared<DeviceBase>("House temperatures", "temp");
+    SensorAttributes attributes = getTemperatureSensorAttributes();
+    for(const auto& [sensor_id, sensor_name] : temp_sensors)
+    {
+        auto temp = std::make_shared<SensorFunction<double>>(sensor_name, attributes);
+        temperatures->registerFunction(temp);
+    }
+    connector->registerDevice(temperatures);
 
-    // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
-
-    // Create the device
-    connector->registerDevice(ventilator);
-    connector->registerDevice(incoming_temp);
-    connector->registerDevice(outgoing_temp);
-    connector->registerDevice(io1_temp);
-    connector->registerDevice(io2_temp);
+    // Connect to the mqtt server
     connector->connect();
 
-    ventilator->getFunction()->updateDeviceMode("heat");
-    ventilator->getFunction()->updateFanMode("low");
+    ventilator->getFunction()->updateDeviceMode(start_mode);
+    ventilator->getFunction()->updateFanMode(start_fan_mode);
 
     // Run the device
     // Here we loop forever, and basically handle incoming messages and update
@@ -388,7 +391,7 @@ int main(int argc, char* argv[])
     {
         ++loop_count;
         // If we have been running for 2 minutes, save the state (if changed)
-        if(loop_count % (2 * 60 * (1000 / tick_size_ms)) == 0)
+        if(loop_count % (2 * 60 * (1000 / tick_size_ms)) == 0 && changed)
         {
             LOG_DEBUG("Saving state");
             auto status_file_name = config.at("status_file").get<std::string>();
@@ -398,10 +401,11 @@ int main(int argc, char* argv[])
                 status_file << ventilator->getFunction()->getDeviceMode() << std::endl;
                 status_file << ventilator->getFunction()->getFanMode() << std::endl;
                 status_file.close();
+                changed = false;
             }
             else
             {
-                std::cerr << "Could not open status file" << std::endl;
+                LOG_WARN("Could not open status file to write current status {}", status_file_name);
             }
         }
 
@@ -409,11 +413,15 @@ int main(int argc, char* argv[])
         if(has_read_temp)
         {
             has_read_temp = false;
-            ventilator->getFunction()->updateTemperature(temp_temperatures[temp_sensors.at("Outgoing")]);
-            incoming_temp->update(temp_temperatures[temp_sensors.at("from_house")]);
-            outgoing_temp->update(temp_temperatures[temp_sensors.at("to_house")]);
-            io1_temp->update(temp_temperatures[temp_sensors.at("In/out 1")]);
-            io2_temp->update(temp_temperatures[temp_sensors.at("In/out 2")]);
+            ventilator->getFunction()->updateTemperature(temp_temperatures["From house"]);
+            for(const auto& [sensor_id, sensor_name] : temp_sensors)
+            {
+                auto temp = std::dynamic_pointer_cast<SensorFunction<double>>(temperatures->findFunction(sensor_name));
+                if(temp)
+                {
+                    temp->update(temp_temperatures[sensor_name]);
+                }
+            }
         }
 
         // Process messages from the MQTT server for 1 second

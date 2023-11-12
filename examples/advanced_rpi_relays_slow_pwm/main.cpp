@@ -76,10 +76,10 @@ int main(int argc, char* argv[])
 
     // Read the config file
     LOG_DEBUG("Reading config file");
-    std::ifstream config_file("/etc/rpi_relays.json");
+    std::ifstream config_file("/etc/hass_mqtt.json");
     if(!config_file.is_open())
     {
-        LOG_ERROR("Could not open /etc/rpi_relays.json");
+        LOG_ERROR("Could not open /etc/hass_mqtt.json");
         return 1;
     }
 
@@ -139,16 +139,17 @@ int main(int argc, char* argv[])
         std::cout << "Could not open /etc/machine-id" << std::endl;
         return 1;
     }
-    unique_id += "_rpi_relays_pwm";
+    unique_id += "_hass_mqtt_pwm";
 
     // Create the connector
     auto connector = std::make_shared<MQTTConnector>(config.at("ip").get<std::string>(),
                                                      config.at("port").get<int>(),
                                                      config.at("username").get<std::string>(),
-                                                     config.at("password").get<std::string>());
+                                                     config.at("password").get<std::string>(),
+                                                     unique_id);
 
     // Create the device
-    auto device = std::make_shared<DeviceBase>("rpi_relays_slow_pwm", unique_id);
+    auto device = std::make_shared<DeviceBase>("hass_mqtt_slow_pwm");
 
     // Create the functions
     int index = 0;
@@ -276,10 +277,10 @@ void updateNumberPwmOutputs()
     static int loop_count = 0;
     loop_count++;
 
-    std::ofstream status("/tmp/rpi_relays_pwm");
+    std::ofstream status("/tmp/hass_mqtt_pwm");
     if(!status.good())
     {
-        LOG_WARN("Could not open /tmp/rpi_relays_pwm");
+        LOG_WARN("Could not open /tmp/hass_mqtt_pwm");
     }
 
     int i = 0;

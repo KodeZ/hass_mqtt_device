@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
     std::vector<std::string> swing_modes = {"off", "on"};
     std::vector<std::string> preset_modes = {"eco", "away"};
 
-    auto sw = std::make_shared<HvacDevice>("simple_hvac_example", unique_id);
+    auto sw = std::make_shared<HvacDevice>("simple_hvac_example");
 
     sw->init([sw](HvacSupportedFeatures feature,
                   std::string value) { controlStateCallback(sw->getFunction(), feature, value); },
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
              swing_modes,
              preset_modes);
 
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
     connector->registerDevice(sw);
     connector->connect();
 

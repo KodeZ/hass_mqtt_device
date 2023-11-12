@@ -8,6 +8,7 @@
 #include "hass_mqtt_device/core/function_base.h"
 
 // Include any other necessary headers
+#include "hass_mqtt_device/core/helper_functions.hpp"
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 #include <vector>
 
@@ -21,6 +22,11 @@ std::string FunctionBase::getName() const
     return m_function_name;
 }
 
+std::string FunctionBase::getCleanName() const
+{
+    return getValidHassString(getName());
+}
+
 std::string FunctionBase::getId() const
 {
     auto parent = m_parent_device.lock();
@@ -29,7 +35,7 @@ std::string FunctionBase::getId() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return parent->getFullId() + "_" + getName();
+    return parent->getFullId() + "_" + getCleanName();
 }
 
 std::string FunctionBase::getBaseTopic() const
@@ -40,5 +46,5 @@ std::string FunctionBase::getBaseTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "home/" + parent->getFullId() + "/" + getName() + "/";
+    return "home/" + parent->getFullId() + "/" + getCleanName() + "/";
 };

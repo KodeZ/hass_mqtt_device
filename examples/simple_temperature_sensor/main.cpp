@@ -60,10 +60,10 @@ int main(int argc, char* argv[])
     unique_id += "_simple_on_off_light";
 
     // Create the device
-    auto temp = std::make_shared<TemperatureSensorDevice>("simple_temperature_sensor_example", unique_id);
+    auto temp = std::make_shared<TemperatureSensorDevice>("simple_temperature_sensor_example");
     temp->init();
 
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
     connector->registerDevice(temp);
     connector->connect();
 

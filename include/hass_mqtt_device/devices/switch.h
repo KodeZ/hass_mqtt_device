@@ -24,7 +24,7 @@ public:
      * @param unique_id The unique id of the device
      * @param control_cb The callback to call when the state of the switch
      */
-    SwitchDevice(const std::string& device_name, const std::string& unique_id, std::function<void(bool)> control_cb);
+    SwitchDevice(const std::string& device_name, std::function<void(bool)> control_cb, const std::string& unique_id = "");
 
     /**
      * @brief Implement init function for this device

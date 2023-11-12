@@ -17,11 +17,14 @@ int backoff_state = 0;
 MQTTConnector::MQTTConnector(const std::string& server,
                              const int port,
                              const std::string& username,
-                             const std::string& password)
+                             const std::string& password,
+                             const std::string& unique_id)
     : m_server(server)
     , m_port(port)
     , m_username(username)
     , m_password(password)
+    , m_unique_id(unique_id)
+    , m_mosquitto(nullptr)
 {
     LOG_DEBUG("MQTTConnector created with server: {}", server);
 
@@ -29,13 +32,19 @@ MQTTConnector::MQTTConnector(const std::string& server,
     mosquitto_lib_init();
 }
 
+std::string MQTTConnector::getAvailabilityTopic() const
+{
+    std::string topic = "home/" + getId() + "/availability";
+    return topic;
+};
+
 // Connect to the MQTT server
 bool MQTTConnector::connect()
 {
     LOG_DEBUG("Connecting to MQTT server: {}", m_server);
 
     m_mosquitto = mosquitto_new(nullptr, true, this);
-    if(!m_mosquitto)
+    if(m_mosquitto == nullptr)
     {
         LOG_ERROR("Failed to create mosquitto instance");
         return false;
@@ -51,11 +60,8 @@ bool MQTTConnector::connect()
     mosquitto_unsubscribe_callback_set(m_mosquitto, unsubscribeCallback);
     mosquitto_message_callback_set(m_mosquitto, messageCallback);
 
-    // Set the lwt for all devices
-    for(auto& device : m_registered_devices)
-    {
-        device->sendLWT();
-    }
+    // Set the lwt availability topic for all devices
+    publishLWT();
 
     int rc = mosquitto_connect(m_mosquitto, m_server.c_str(), m_port, 60);
     if(rc != MOSQ_ERR_SUCCESS)
@@ -89,9 +95,9 @@ void MQTTConnector::registerDevice(std::shared_ptr<DeviceBase> device)
     // name and id is not
     for(auto& registered_device : m_registered_devices)
     {
-        if(registered_device->getName() == device->getName() && registered_device->getId() == device->getId())
+        if(registered_device->getCleanName() == device->getCleanName() && registered_device->getId() == device->getId())
         {
-            LOG_ERROR("Device with id {} and name {} already registered", device->getId(), device->getName());
+            LOG_ERROR("Device with id {} and name {} already registered", device->getId(), device->getCleanName());
             throw std::runtime_error("Device with name already registered");
         }
     }
@@ -124,9 +130,9 @@ void MQTTConnector::unregisterDevice(const std::string& device_name)
 // Get a device by name
 std::shared_ptr<DeviceBase> MQTTConnector::getDevice(const std::string& device_name) const
 {
-    for(auto& device : m_registered_devices)
+    for(const auto& device : m_registered_devices)
     {
-        if(device->getName() == device_name)
+        if(device->getName() == device_name || device->getCleanName() == device_name)
         {
             return device;
         }
@@ -148,23 +154,20 @@ void MQTTConnector::processMessages(int timeout, bool exit_on_event)
         {
             return;
         }
-        else
+        slept_for = 0;
+        backoff_state++;
+        if(backoff_state >= backoff_ladder.size())
         {
-            slept_for = 0;
-            backoff_state++;
-            if(backoff_state >= backoff_ladder.size())
-            {
-                backoff_state = backoff_ladder.size() - 1;
-            }
+            backoff_state = backoff_ladder.size() - 1;
+        }
 
-            bool rc = connect();
-            if(!rc)
-            {
-                LOG_ERROR("Failed to reconnect to MQTT server: {}. Continuing to sleep "
-                          "and retry.",
-                          mosquitto_strerror(rc));
-                return;
-            }
+        bool rc = connect();
+        if(!rc)
+        {
+            LOG_ERROR("Failed to reconnect to MQTT server: {}. Continuing to sleep "
+                      "and retry.",
+                      mosquitto_strerror(rc));
+            return;
         }
         backoff_state = 0;
     }
@@ -210,12 +213,17 @@ void MQTTConnector::publishMessage(const std::string& topic, const json& payload
 }
 
 // publish last will and testament
-void MQTTConnector::publishLWT(const std::string& topic, const json& payload)
+void MQTTConnector::publishLWT()
 {
+    // Create the will message
+    json payload;
+    payload["availability"] = "offline";
+
     std::string payload_str = payload.dump();
-    LOG_DEBUG("Publishing LWT MQTT message to topic: {}", topic);
+    LOG_DEBUG("Publishing LWT MQTT message to topic: {}", getAvailabilityTopic());
     LOG_DEBUG("LWT MQTT message payload: {}", payload_str);
-    int rc = mosquitto_will_set(m_mosquitto, topic.c_str(), payload_str.size(), payload_str.c_str(), 1, true);
+    int rc =
+        mosquitto_will_set(m_mosquitto, getAvailabilityTopic().c_str(), payload_str.size(), payload_str.c_str(), 1, true);
     if(rc != MOSQ_ERR_SUCCESS)
     {
         LOG_ERROR("Failed to publish MQTT message: {}", mosquitto_strerror(rc));
@@ -223,10 +231,10 @@ void MQTTConnector::publishLWT(const std::string& topic, const json& payload)
 }
 
 // Callback for incoming MQTT messages, implementing the on_message
-void MQTTConnector::messageCallback(mosquitto* mosq, void* obj, const mosquitto_message* message)
+void MQTTConnector::messageCallback(mosquitto*  /*mosq*/, void* obj, const mosquitto_message* message)
 {
     LOG_DEBUG("Received MQTT message on topic: {}", message->topic);
-    MQTTConnector* connector = static_cast<MQTTConnector*>(obj);
+    auto* connector = static_cast<MQTTConnector*>(obj);
     // Convert the topic and message to a string
     std::string topic(message->topic);
     std::string payload(static_cast<char*>(message->payload), message->payloadlen);
@@ -234,7 +242,7 @@ void MQTTConnector::messageCallback(mosquitto* mosq, void* obj, const mosquitto_
     for(auto& device : connector->m_registered_devices)
     {
         // Check if the topic starts with the device's topic after home/
-        if(topic.find("home/" + device->getId()) == 0)
+        if(topic.find("home/" + device->getFullId()) == 0)
         {
             // Call the device's processMessage method
             device->processMessage(topic, payload);
@@ -244,10 +252,10 @@ void MQTTConnector::messageCallback(mosquitto* mosq, void* obj, const mosquitto_
 
 // Callback for successful connection to the MQTT server, implementing
 // on_connect
-void MQTTConnector::connectCallback(mosquitto* mosq, void* obj, int rc)
+void MQTTConnector::connectCallback(mosquitto*  /*mosq*/, void* obj, int rc)
 {
     LOG_DEBUG("Connected to MQTT server callback");
-    MQTTConnector* connector = static_cast<MQTTConnector*>(obj);
+    auto* connector = static_cast<MQTTConnector*>(obj);
 
     // Subscribe to the topics of the registered devices
     for(auto& device : connector->m_registered_devices)
@@ -268,7 +276,6 @@ void MQTTConnector::connectCallback(mosquitto* mosq, void* obj, int rc)
     LOG_DEBUG("Sending discovery messages for {} devices", connector->m_registered_devices.size());
     for(auto& device : connector->m_registered_devices)
     {
-        LOG_DEBUG("Sending discovery for device: {}", device->getName());
         device->sendDiscovery();
         device->sendStatus();
     }
@@ -279,23 +286,23 @@ void MQTTConnector::connectCallback(mosquitto* mosq, void* obj, int rc)
 
 // Callback for disconnection from the MQTT server, implementing
 // on_disconnect
-void MQTTConnector::disconnectCallback(mosquitto* mosq, void* obj, int rc)
+void MQTTConnector::disconnectCallback(mosquitto*  /*mosq*/, void* obj, int  /*rc*/)
 {
     LOG_INFO("Disconnected from MQTT server");
-    MQTTConnector* connector = static_cast<MQTTConnector*>(obj);
+    auto* connector = static_cast<MQTTConnector*>(obj);
     connector->m_is_connected = false;
 }
 
 // Callback for successful subscription to an MQTT topic, implementing
 // on_subscribe
-void MQTTConnector::subscribeCallback(mosquitto* mosq, void* obj, int mid, int qos_count, const int* granted_qos)
+void MQTTConnector::subscribeCallback(mosquitto*  /*mosq*/, void*  /*obj*/, int  /*mid*/, int  /*qos_count*/, const int*  /*granted_qos*/)
 {
     LOG_DEBUG("Subscribed to MQTT topic");
 }
 
 // Callback for successful unsubscription to an MQTT topic, implementing
 // on_unsubscribe
-void MQTTConnector::unsubscribeCallback(mosquitto* mosq, void* obj, int mid)
+void MQTTConnector::unsubscribeCallback(mosquitto*  /*mosq*/, void*  /*obj*/, int  /*mid*/)
 {
     LOG_ERROR("Unsubscribed from MQTT topic");
 }

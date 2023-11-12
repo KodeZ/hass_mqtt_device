@@ -32,9 +32,9 @@ public:
      * @brief Construct a new DeviceBase object
      *
      * @param device_name The name of the device
-     * @param unique_id The unique id of the device
+     * @param unique_id The unique id of the device. Can be empty if you don't have multiple devices to register
      */
-    DeviceBase(const std::string& device_name, const std::string& unique_id);
+    explicit DeviceBase(const std::string& device_name, const std::string& id = "");
 
     /**
      * @brief Destroy the DeviceBase object
@@ -54,6 +54,20 @@ public:
      * @return The name of this device
      */
     std::string getName() const;
+
+    /**
+     * @brief Get a clean version of the name of this device
+     *
+     * @return A cleaned up name of this device
+     */
+    std::string getCleanName() const;
+
+    /**
+     * @brief Get the unique id of this device
+     *
+     * @return The unique id of this device, this includes the connection unique id too
+     */
+    std::string getUniqueId() const;
 
     /**
      * @brief Get the id_name of this device
@@ -142,7 +156,7 @@ public:
 
 protected:
     std::string m_device_name;
-    std::string m_unique_id;
+    std::string m_id;
     std::vector<std::shared_ptr<FunctionBase>> m_functions;
     std::weak_ptr<MQTTConnector> m_connector;
 

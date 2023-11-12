@@ -109,6 +109,7 @@ public:
     void update(T value);
 
 private:
+    bool m_has_data;
 protected:
     SensorAttributes m_attributes;
     T m_value;

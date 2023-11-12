@@ -76,10 +76,10 @@ int main(int argc, char* argv[])
     unique_id += "_simple_number_example";
 
     // Create the device
-    auto number = std::make_shared<NumberDevice>("simple_number_example", unique_id, controlCallback);
+    auto number = std::make_shared<NumberDevice>("simple_number_example", controlCallback);
     number->init();
 
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
     connector->registerDevice(number);
     connector->connect();
 

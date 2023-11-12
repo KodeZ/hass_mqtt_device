@@ -97,7 +97,7 @@ std::string HvacFunction::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/climate/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/climate/" + parent->getFullId() + "/" + getCleanName() + "/config";
 }
 
 json HvacFunction::getDiscoveryJson() const
@@ -390,7 +390,7 @@ void HvacFunction::sendFunctionStatus(const HvacSupportedFeatures& feature) cons
         parent->publishMessage(getBaseTopic() + "preset_mode/state", payload);
         return;
     }
-    LOG_WARN("Feature {} is not supported for this hvac function", feature);
+    LOG_DEBUG("Feature {} is not supported for this hvac function", feature);
 }
 
 void HvacFunction::updateTemperature(double temperature, bool send_status)

@@ -23,12 +23,12 @@ public:
      * @param device_name The name of the device
      * @param unique_id The unique id of the device
      */
-    TemperatureSensorDevice(const std::string& device_name, const std::string& unique_id);
+    TemperatureSensorDevice(const std::string& device_name, const std::string& unique_id = "");
 
     /**
      * @brief Implement init function for this device
      */
-    void init();
+    void init(std::string function_name = "temperature");
 
     /**
      * @brief Update the temperature value. Should be called by the user and be
@@ -39,4 +39,5 @@ public:
     void update(double value);
 
 private:
+    std::string m_function_name;
 };

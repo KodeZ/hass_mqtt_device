@@ -41,7 +41,7 @@ std::string SwitchFunction::getDiscoveryTopic() const
         LOG_ERROR("Parent device is not available.");
         return "";
     }
-    return "homeassistant/switch/" + parent->getFullId() + "/" + getName() + "/config";
+    return "homeassistant/switch/" + parent->getFullId() + "/" + getCleanName() + "/config";
 }
 
 json SwitchFunction::getDiscoveryJson() const

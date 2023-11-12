@@ -89,10 +89,10 @@ int main(int argc, char* argv[])
     unique_id += "_simple_dimmable_light";
 
     // Create the device
-    auto light = std::make_shared<DimmableLightDevice>("simple_dimmable_light_example", unique_id, controlCallback);
+    auto light = std::make_shared<DimmableLightDevice>("simple_dimmable_light_example", controlCallback);
     light->init();
 
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password);
+    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
     connector->registerDevice(light);
     connector->connect();
 

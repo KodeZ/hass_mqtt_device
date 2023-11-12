@@ -7,6 +7,7 @@
 #include "hass_mqtt_device/devices/temp_sensor.h"
 #include "hass_mqtt_device/core/function_base.h"
 #include "hass_mqtt_device/functions/sensor.h"
+#include "hass_mqtt_device/functions/sensor_attributes_factory.hpp"
 #include "hass_mqtt_device/logger/logger.hpp"
 #include <functional>
 #include <memory>
@@ -23,17 +24,14 @@ TemperatureSensorDevice::TemperatureSensorDevice(const std::string& device_name,
 {
 }
 
-void TemperatureSensorDevice::init()
+void TemperatureSensorDevice::init(std::string function_name)
 {
-    LOG_DEBUG("Initializing temperature sensor device");
-    SensorAttributes attributes;
-    attributes.unit_of_measurement = "°C";
-    attributes.device_class = "temperature";
-    attributes.state_class = "measurement";
-    attributes.suggested_display_precision = 1;
+    LOG_DEBUG("Initializing temperature sensor device with function name: " + function_name);
+    m_function_name = function_name;
+    SensorAttributes attributes = getTemperatureSensorAttributes();
 
     std::shared_ptr<SensorFunction<double>> temperature =
-        std::make_shared<SensorFunction<double>>("temperature", attributes);
+        std::make_shared<SensorFunction<double>>(function_name, attributes);
     std::shared_ptr<FunctionBase> temperature_base = temperature;
     registerFunction(temperature_base);
 }
@@ -41,7 +39,7 @@ void TemperatureSensorDevice::init()
 void TemperatureSensorDevice::update(double value)
 {
     std::shared_ptr<SensorFunction<double>> temperature =
-        std::dynamic_pointer_cast<SensorFunction<double>>(findFunction("temperature"));
+        std::dynamic_pointer_cast<SensorFunction<double>>(findFunction(m_function_name));
     if(temperature)
     {
         temperature->update(value);

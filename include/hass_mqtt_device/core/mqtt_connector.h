@@ -34,8 +34,31 @@ public:
      * @param port The port to use when connecting to the MQTT server
      * @param username The username to use when connecting to the MQTT server
      * @param password The password to use when connecting to the MQTT server
+     * @param unique_id The unique id of the device. This will be used as a common value for all devices that are
+     * registered, and for the availability topic
      */
-    MQTTConnector(const std::string& server, const int port, const std::string& username, const std::string& password);
+    MQTTConnector(const std::string& server,
+                  int port,
+                  const std::string& username,
+                  const std::string& password,
+                  const std::string& unique_id);
+
+    /**
+     * @brief Get the unique id of the connection
+     *
+     * @return The unique id of the connection
+     */
+    std::string getId() const
+    {
+        return m_unique_id;
+    };
+
+    /**
+     * @brief Get the unique id of the connection
+     *
+     * @return The unique id of the connection
+     */
+    std::string getAvailabilityTopic() const;
 
     /**
      * @brief Connect to the MQTT server
@@ -95,15 +118,12 @@ public:
      */
     void publishMessage(const std::string& topic, const json& payload);
 
+private:
     /**
      * @brief Send a last will and testament message to the MQTT server
-     *
-     * @param topic The topic to publish to
-     * @param payload The payload to publish
      */
-    void publishLWT(const std::string& topic, const json& payload);
+    void publishLWT();
 
-private:
     /**
      * @brief Callback for incoming MQTT messages, implementing the on_message
      *
@@ -159,6 +179,7 @@ private:
     int m_port;
     std::string m_username;
     std::string m_password;
+    std::string m_unique_id;
     bool m_is_connected = false;
     std::vector<std::shared_ptr<DeviceBase>> m_registered_devices; // List of registered devices using smart pointers
     mosquitto* m_mosquitto;

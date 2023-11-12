@@ -26,8 +26,8 @@ public:
      * @param control_cb The callback to call when receiving a control message
      */
     DimmableLightDevice(const std::string& device_name,
-                        const std::string& unique_id,
-                        std::function<void(bool, double)> control_cb);
+                        std::function<void(bool, double)> control_cb,
+                        const std::string& unique_id = "");
 
     /**
      * @brief Implement init function for this device

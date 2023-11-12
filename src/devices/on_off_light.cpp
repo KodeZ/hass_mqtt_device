@@ -18,8 +18,8 @@
  */
 
 OnOffLightDevice::OnOffLightDevice(const std::string& device_name,
-                                   const std::string& unique_id,
-                                   std::function<void(bool)> control_cb)
+                                   std::function<void(bool)> control_cb,
+                                   const std::string& unique_id)
     : DeviceBase(device_name, unique_id)
     , m_control_cb(control_cb)
 {
