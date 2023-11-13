@@ -94,6 +94,14 @@ int main(int argc, char* argv[])
     }
     config_file.close();
 
+    // Check that the config file contains the required fields
+    if(!config.contains("ip") || !config.contains("port") || !config.contains("username") ||
+       !config.contains("password") || !config.contains("functions") || !config.contains("status_file"))
+    {
+        LOG_ERROR("Config file does not contain the required fields");
+        return 1;
+    }
+
     // Read the status file
     {
         LOG_DEBUG("Reading status file");
@@ -206,7 +214,7 @@ int main(int argc, char* argv[])
             for(const auto& function : config["functions"])
             {
                 if(!function.contains("value_saved") ||
-                   (function.contains("value") && function["value"] != function["values_saved"]))
+                   (function.contains("value") && function["value"] != function["value_saved"]))
                 {
                     changed = true;
                     break;
