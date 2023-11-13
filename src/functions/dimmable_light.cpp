@@ -11,7 +11,8 @@
 // Include any other necessary headers
 #include "hass_mqtt_device/logger/logger.hpp" // For logging
 
-DimmableLightFunction::DimmableLightFunction(const std::string& function_name, std::function<void(bool, double)> control_cb)
+DimmableLightFunction::DimmableLightFunction(const std::string& function_name,
+                                             std::function<void(bool, double)> control_cb)
     : FunctionBase(function_name)
     , m_control_cb(control_cb)
 {
@@ -79,8 +80,12 @@ void DimmableLightFunction::processMessage(const std::string& topic, const std::
     }
 
     // Handle the sub topics
-    double brightness = payloadJson["brightness"];
-    brightness /= 255.0;
+    double brightness = m_brightness;
+    if(payloadJson.contains("brightness"))
+    {
+        brightness = payloadJson["brightness"];
+        brightness /= 255.0;
+    }
     m_control_cb(payloadJson["state"] == "ON", brightness);
 }
 

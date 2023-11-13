@@ -35,7 +35,7 @@ public:
     void init();
 
     /**
-     * @brief Update the state of the light. Should be called by the user and be
+     * @brief Update the state and brightness of the light. Should be called by the user and be
      * kept in sync with the actual state of the light
      *
      * @param state The new state of the light

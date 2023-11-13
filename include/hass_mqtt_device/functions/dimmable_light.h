@@ -68,7 +68,7 @@ public:
     void sendStatus() const override;
 
     /**
-     * @brief Set the state of this function
+     * @brief Set the state and brightness of this function
      *
      * @param state The state to set
      * @param brightness The brightness to set (0-1)
@@ -80,7 +80,7 @@ public:
      *
      * @return The state of this function
      */
-    bool getState() const
+    [[nodiscard]] bool getState() const
     {
         return m_state;
     };

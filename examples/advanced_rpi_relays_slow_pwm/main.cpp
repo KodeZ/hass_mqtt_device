@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
                                                      unique_id);
 
     // Create the device
-    auto device = std::make_shared<DeviceBase>("hass_mqtt_slow_pwm");
+    auto device = std::make_shared<DeviceBase>("Slow PWM outputs");
 
     // Create the functions
     int index = 0;

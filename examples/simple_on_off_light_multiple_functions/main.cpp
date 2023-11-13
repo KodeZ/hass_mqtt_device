@@ -109,7 +109,6 @@ int main(int argc, char* argv[])
     int loop_count = 0;
     while(1)
     {
-        LOG_DEBUG("Loop count: {}", loop_count);
         // Process messages from the MQTT server for 1 second
         connector->processMessages(1000);
 
