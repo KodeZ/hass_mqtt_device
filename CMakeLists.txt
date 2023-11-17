@@ -25,6 +25,12 @@ target_compile_options(hass_mqtt_device PRIVATE
   $<$<CONFIG:Release>:-O3>
 )
 
+# Use ccache
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+endif()
+
 # Include directories
 target_include_directories(hass_mqtt_device PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(hass_mqtt_device PUBLIC ${MOSQUITTO_INCLUDE_DIRS})
