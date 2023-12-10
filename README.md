@@ -13,7 +13,15 @@ There are a number of functions and device types available. See the examples for
 - Mosquitto MQTT broker development package
 - Spdlog
 ```
-sudo apt install cmake libspdlog-dev nlohmann-json3-dev
+sudo apt update
+sudo apt install cmake libspdlog-dev nlohmann-json3-dev git libmosquittopp-dev
+```
+
+Also you need wiring-pi for raspberry pi setups:
+```
+wget https://project-downloads.drogon.net/wiringpi-latest.deb
+sudo dpkg -i wiringpi-latest.deb
+rm wiringpi-latest.deb
 ```
 
 ### Optional
@@ -24,7 +32,7 @@ sudo apt install cmake libspdlog-dev nlohmann-json3-dev
 
 1. Clone the repository:
 ```
-git clone https://github.com/yourusername/hass_mqtt_device.git
+git clone https://github.com/KodeZ/hass_mqtt_device.git
 ```
 
 2. Navigate to the project directory and create a build directory:
