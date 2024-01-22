@@ -38,6 +38,8 @@
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
+// Print warning to the compiler output
+#warning "Compiling for non-arm platform, using mock wiringPi functions"
 void digitalWrite(int pin, bool state)
 {
     LOG_DEBUG("Relay {} set to {}", pin, state);
@@ -56,10 +58,13 @@ const int tick_size_ms = 1000;
 bool stop_threads = false;
 bool recovery_enabled = true;
 const int ROTATION_DELAY = 45;        // Seconds
-const int RECOVER_ROTOR = 21;         // Recovery output
-const int SPEED_LOW = 22;             // Low-other speed
-const int SPEED_MED_HIGH = 23;        // Medium-High speed (if not Low on CH2)
+
+const int RECOVER_ROTOR = 21;         // Recovery output pin
+const int SPEED_LOW = 22;             // Low-other speed pin
+const int SPEED_MED_HIGH = 23;        // Medium-High speed (if not Low on CH2) pin
+
 const int RECOVER_ROTOR_POSITION = 3; // Input from shifter
+
 const std::vector<std::string> DEVICE_MODES = {"cool", "heat"};
 const std::vector<std::string> FAN_MODES = {"low", "medium", "high"};
 
@@ -97,7 +102,7 @@ void setFanSpeed(std::string speed)
     }
 }
 
-bool changed = false;
+bool changed = false; // Used to trigger writing new status file
 void controlStateCallback(std::shared_ptr<HvacFunction> function, HvacSupportedFeatures feature, std::string value)
 {
     switch(feature)
@@ -151,6 +156,7 @@ void recoveryRotorThread()
             std::this_thread::sleep_for(std::chrono::seconds(1));
             continue;
         }
+        LOG_DEBUG("Heating mode");
 
         LOG_DEBUG("Starting recovery rotor rotation");
         // Start recovery rotation
@@ -159,6 +165,7 @@ void recoveryRotorThread()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
+        LOG_DEBUG("Recovery rotor stabilized");
         // Let the sensor stabilize
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         // Wait until it returns
@@ -173,6 +180,7 @@ void recoveryRotorThread()
         // Sleep for the alotted time
         std::this_thread::sleep_for(std::chrono::seconds(ROTATION_DELAY));
     }
+    LOG_DEBUG("Ending recovery rotor thread");
 }
 
 // Will be updated on every read cycle. Should be reset by the user in order to detect when a new read has happened
@@ -328,7 +336,15 @@ int main(int argc, char* argv[])
 
 #ifdef __arm__
     wiringPiSetup();
+    pinMode(RECOVER_ROTOR, OUTPUT);
+    pinMode(SPEED_LOW, OUTPUT);
+    pinMode(SPEED_MED_HIGH, OUTPUT);
+    pinMode(RECOVER_ROTOR_POSITION, INPUT);
+    pullUpDnControl(RECOVER_ROTOR_POSITION, PUD_UP);
 #endif
+
+    recovery_enabled = true;
+    setFanSpeed(start_fan_mode);
 
     // Start the threads
     std::thread recovery_thread(recoveryRotorThread);
