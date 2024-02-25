@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
     {
         if(function["type"] == "number")
         {
+            pinMode(function["usage"]["gpio"].get<int>(), OUTPUT);
             std::shared_ptr<NumberFunction> func_ptr = std::make_shared<NumberFunction>(
                 function["name"],
                 [index](double state) { controlNumberCallback(index, state); },
