@@ -26,9 +26,34 @@
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
+// Print warning to the compiler output
+#warning "Compiling for non-arm platform, using mock wiringPi functions"
+#define OUTPUT 0
+#define INPUT 0
+#define PUD_UP 0
+#define PUD_DOWN 0
+void wiringPiSetup()
+{
+    LOG_DEBUG("wiringPiSetup called");
+}
 void digitalWrite(int pin, bool state)
 {
     LOG_DEBUG("Relay {} set to {}", pin, state);
+}
+bool digitalRead(int pin)
+{
+    static bool state = false;
+    state = !state;
+    LOG_DEBUG("Relay {} read", pin);
+    return state;
+}
+void pinMode(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
+}
+void pullUpDnControl(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
 }
 #endif
 
@@ -70,9 +95,7 @@ int main(int argc, char* argv[])
     }
     INIT_LOGGER(debug);
 
-#ifdef __arm__
     wiringPiSetup();
-#endif
 
     // Read the config file
     LOG_DEBUG("Reading config file");
@@ -85,6 +108,7 @@ int main(int argc, char* argv[])
 
     try
     {
+        LOG_DEBUG("Parsing JSON");
         config = nlohmann::json::parse(config_file);
     }
     catch(const nlohmann::json::exception& e)
