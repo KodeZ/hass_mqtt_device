@@ -40,6 +40,14 @@
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
 // Print warning to the compiler output
 #warning "Compiling for non-arm platform, using mock wiringPi functions"
+#define OUTPUT 0
+#define INPUT 0
+#define PUD_UP 0
+#define PUD_DOWN 0
+void wiringPiSetup()
+{
+    LOG_DEBUG("wiringPiSetup called");
+}
 void digitalWrite(int pin, bool state)
 {
     LOG_DEBUG("Relay {} set to {}", pin, state);
@@ -51,6 +59,14 @@ bool digitalRead(int pin)
     LOG_DEBUG("Relay {} read", pin);
     return state;
 }
+void pinMode(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
+}
+void pullUpDnControl(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
+}
 #endif
 
 const int tick_size_ms = 1000;
@@ -58,6 +74,9 @@ const long electric_heater_period = 5;
 
 bool stop_threads = false;
 nlohmann::json config;
+double heating_setpoint = 27;
+double average_temp = heating_setpoint;
+double hystreresis = 0.4;
 
 const int R1 = 12;
 const int R2 = 13;
@@ -65,26 +84,26 @@ const int R3 = 14;
 const int Vclose = 8;
 const int Vopen = 9;
 
-const int RECOVER_ROTOR_POSITION = 3; // Input from shifter
+const int VALVE_POSITION_MOTOR_DURATION = 3; // Input from shifter
 
 const std::map<std::string, std::string> temp_sensors = {{"28-0417503c19ff", "Input"},
                                                          {"28-0417507da9ff", "Heat exchanger"},
                                                          {"28-0417507f00ff", "Output"}};
 
-std::map<std::string, double> temp_temperatures = {{"Input", 30},
-                                                   {"Heat exchanger", 31},
-                                                   {"Output", 32}};
+std::map<std::string, double> temp_temperatures = {{"Input", 30}, {"Heat exchanger", 31}, {"Output", 32}};
 
+bool changed = false;
 void controlStateCallback(std::shared_ptr<HvacFunction> function, HvacSupportedFeatures feature, std::string value)
 {
     LOG_INFO("Control callback called. Feature: {}, value: {}", feature, value);
     if(feature == HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING)
     {
         function->updateHeatingSetpoint(std::stod(value));
-    }
-    else if(feature == HvacSupportedFeatures::MODE_CONTROL)
-    {
-        function->updateDeviceMode(value);
+        if(heating_setpoint != std::stod(value))
+        {
+            heating_setpoint = std::stod(value);
+            changed = true;
+        }
     }
     else
     {
@@ -101,7 +120,7 @@ void electricHeaterThread()
     int second_counter = 0;
     while(!stop_threads)
     {
-        if(electric_heater_value == 0)
+        if(electric_heater_value == 0.0)
         {
             // Turn off R1, sleep and continue, nothing to do
             digitalWrite(R1, false);
@@ -117,6 +136,50 @@ void electricHeaterThread()
         // Turn off R1
         digitalWrite(R1, false);
         std::this_thread::sleep_for(std::chrono::milliseconds(electric_heater_period * 1000 - sleep_ms));
+    }
+}
+
+void heaterThread()
+{
+    LOG_DEBUG("Starting heater thread");
+    int second_counter = 0;
+    while(!stop_threads)
+    {
+        // Control the electric heater
+        if(average_temp < (heating_setpoint + 0.5 + (hystreresis/2)))
+        {
+            electric_heater_value = std::min(1.0, electric_heater_value + 0.03);
+        }
+        else if(average_temp > (heating_setpoint + 0.5 - (hystreresis/2)))
+        {
+            electric_heater_value = std::max(0.0, electric_heater_value - 0.03);
+        }
+
+        // Control the valve, but do not add the 0.5 degrees to the setpoint, but rather subtract it
+        if(average_temp < (heating_setpoint - 0.5 + (hystreresis/2)))
+        {
+            digitalWrite(Vclose, true);
+            digitalWrite(Vopen, false);
+            // Run for 3 seconds
+            std::this_thread::sleep_for(std::chrono::seconds(VALVE_POSITION_MOTOR_DURATION));
+            digitalWrite(Vclose, false);
+        }
+        else if(average_temp > (heating_setpoint - 0.5 - (hystreresis/2)))
+        {
+            digitalWrite(Vclose, false);
+            digitalWrite(Vopen, true);
+            // Run for 3 seconds
+            std::this_thread::sleep_for(std::chrono::seconds(VALVE_POSITION_MOTOR_DURATION));
+            digitalWrite(Vopen, false);
+        }
+        else
+        {
+            digitalWrite(Vclose, false);
+            digitalWrite(Vopen, false);
+        }
+
+        // Sleep for 10 seconds between each iteration
+        std::this_thread::sleep_for(std::chrono::seconds(10));
     }
 }
 
@@ -196,6 +259,7 @@ int sanitizeConfig()
         LOG_ERROR("Config file does not contain the required fields");
         return 1;
     }
+    return 0;
 }
 
 // The main function.
@@ -223,6 +287,7 @@ int main(int argc, char* argv[])
         stop_threads = true;
         return 1;
     }
+
     try
     {
         LOG_DEBUG("Parsing JSON");
@@ -245,13 +310,7 @@ int main(int argc, char* argv[])
         return ret;
     }
 
-      // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(config.at("ip").get<std::string>(),
-                                                     config.at("port").get<int>(),
-                                                     config.at("username").get<std::string>(),
-                                                     config.at("password").get<std::string>(),
-                                                     unique_id);
-
+    // Read the status file
     if(config.find("status_file") != config.end())
     {
         LOG_DEBUG("Reading status file");
@@ -263,8 +322,7 @@ int main(int argc, char* argv[])
             if(status_file.good())
             {
                 int i = 0;
-                status_file >> start_mode;
-                status_file >> start_fan_mode;
+                status_file >> heating_setpoint;
                 status_file.close();
             }
             else
@@ -278,24 +336,6 @@ int main(int argc, char* argv[])
         }
     }
 
-#ifdef __arm__
-    wiringPiSetup();
-    pinMode(RECOVER_ROTOR, OUTPUT);
-    pinMode(SPEED_LOW, OUTPUT);
-    pinMode(SPEED_MED_HIGH, OUTPUT);
-    pinMode(RECOVER_ROTOR_POSITION, INPUT);
-    pullUpDnControl(RECOVER_ROTOR_POSITION, PUD_UP);
-#endif
-
-    recovery_enabled = true;
-    setFanSpeed(start_fan_mode);
-    double electricHeaterValue = 0;
-
-    // Start the threads
-    std::thread recovery_thread(electricHeaterThread);
-    std::thread heater );
-
-
     // Get a unique ID
     std::string unique_id;
     std::ifstream machine_id_file("/etc/machine-id");
@@ -306,26 +346,42 @@ int main(int argc, char* argv[])
     }
     else
     {
-        LOG_ERROR("Could not open /etc/machine-id");
-        stop_threads = true;
+        std::cout << "Could not open /etc/machine-id" << std::endl;
         return 1;
     }
-    unique_id += "_rpi_energy_recovery_ventilation";
+    unique_id += "_hass_mqtt_twin_thermostat";
 
     // Create the connector
-    auto connector = std::make_shared<MQTTConnector>(ip, port, username, password, unique_id);
+    auto connector = std::make_shared<MQTTConnector>(config.at("ip").get<std::string>(),
+                                                     config.at("port").get<int>(),
+                                                     config.at("username").get<std::string>(),
+                                                     config.at("password").get<std::string>(),
+                                                     unique_id);
+
+    wiringPiSetup();
+    pinMode(R1, OUTPUT);
+    pinMode(R1, OUTPUT);
+    pinMode(R1, OUTPUT);
+    pinMode(Vclose, OUTPUT);
+    pinMode(Vopen, OUTPUT);
+
+    double electricHeaterValue = 0;
+
+    // Start the threads
+    std::thread electric_heater_thread(electricHeaterThread);
+    std::thread heater_thread(heaterThread);
+    std::thread temp_thread(tempReadingLoop);
 
     // Create the ventilator device
-    auto ventilator = std::make_shared<HvacDevice>("House ventilation", "hvac");
-    ventilator->init([ventilator](HvacSupportedFeatures feature,
-                                  std::string value) { controlStateCallback(ventilator->getFunction(), feature, value); },
-                     HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::FAN_MODE |
-                         HvacSupportedFeatures::MODE_CONTROL,
-                     DEVICE_MODES,
-                     FAN_MODES,
+    auto thermostat = std::make_shared<HvacDevice>("Floor heating setpoint", "floor_heating_setpoint");
+    thermostat->init([thermostat](HvacSupportedFeatures feature,
+                                  std::string value) { controlStateCallback(thermostat->getFunction(), feature, value); },
+                     HvacSupportedFeatures::TEMPERATURE | HvacSupportedFeatures::TEMPERATURE_CONTROL_HEATING,
+                     {},
+                     {},
                      {},
                      {});
-    connector->registerDevice(ventilator);
+    connector->registerDevice(thermostat);
 
     // Create the temperature sensors
     auto temperatures = std::make_shared<DeviceBase>("House temperatures", "temp");
@@ -340,8 +396,7 @@ int main(int argc, char* argv[])
     // Connect to the mqtt server
     connector->connect();
 
-    ventilator->getFunction()->updateDeviceMode(start_mode);
-    ventilator->getFunction()->updateFanMode(start_fan_mode);
+    thermostat->getFunction()->updateHeatingSetpoint(heating_setpoint);
 
     // Run the device
     // Here we loop forever, and basically handle incoming messages and update
@@ -360,8 +415,7 @@ int main(int argc, char* argv[])
             std::ofstream status_file(status_file_name);
             if(status_file.good())
             {
-                status_file << ventilator->getFunction()->getDeviceMode() << std::endl;
-                status_file << ventilator->getFunction()->getFanMode() << std::endl;
+                status_file << heating_setpoint << std::endl;
                 status_file.close();
                 changed = false;
             }
@@ -375,7 +429,9 @@ int main(int argc, char* argv[])
         if(has_read_temp)
         {
             has_read_temp = false;
-            ventilator->getFunction()->updateTemperature(temp_temperatures["From house"]);
+            // Find the average temperature between input and output
+            average_temp = (temp_temperatures["Input"] + temp_temperatures["Output"]) / 2;
+            thermostat->getFunction()->updateTemperature(average_temp);
             for(const auto& [sensor_id, sensor_name] : temp_sensors)
             {
                 auto temp = std::dynamic_pointer_cast<SensorFunction<double>>(temperatures->findFunction(sensor_name));
