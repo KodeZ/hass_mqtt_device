@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
     connector->registerDevice(thermostat);
 
     // Create the temperature sensors
-    auto temperatures = std::make_shared<DeviceBase>("House temperatures", "temp");
+    auto temperatures = std::make_shared<DeviceBase>("Floor heating temperatures", "floor_heating_temps");
     SensorAttributes attributes = getTemperatureSensorAttributes();
     for(const auto& [sensor_id, sensor_name] : temp_sensors)
     {
