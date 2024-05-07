@@ -120,6 +120,7 @@ void electricHeaterThread()
     int second_counter = 0;
     while(!stop_threads)
     {
+        LOG_DEBUG("Electric heater value: {}", electric_heater_value);
         if(electric_heater_value == 0.0)
         {
             // Turn off R1, sleep and continue, nothing to do
@@ -158,22 +159,27 @@ void heaterThread()
         // Control the valve, but do not add the 0.5 degrees to the setpoint, but rather subtract it
         if(average_temp < (heating_setpoint - 0.5 + (hystreresis / 2)))
         {
+            LOG_DEBUG("Opening valve start");
             digitalWrite(Vclose, true);
             digitalWrite(Vopen, false);
             // Run for 3 seconds
             std::this_thread::sleep_for(std::chrono::seconds(VALVE_POSITION_MOTOR_DURATION));
+            LOG_DEBUG("Opening valve end");
             digitalWrite(Vclose, false);
         }
         else if(average_temp > (heating_setpoint - 0.5 - (hystreresis / 2)))
         {
             digitalWrite(Vclose, false);
             digitalWrite(Vopen, true);
+            LOG_DEBUG("Closing valve start");
             // Run for 3 seconds
             std::this_thread::sleep_for(std::chrono::seconds(VALVE_POSITION_MOTOR_DURATION));
+            LOG_DEBUG("Closing valve end");
             digitalWrite(Vopen, false);
         }
         else
         {
+            LOG_DEBUG("Valve in correct position");
             digitalWrite(Vclose, false);
             digitalWrite(Vopen, false);
         }
