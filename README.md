@@ -19,9 +19,9 @@ sudo apt install cmake libspdlog-dev nlohmann-json3-dev git libmosquittopp-dev
 
 Also you need wiring-pi for raspberry pi setups:
 ```
-wget https://project-downloads.drogon.net/wiringpi-latest.deb
-sudo dpkg -i wiringpi-latest.deb
-rm wiringpi-latest.deb
+wget https://github.com/WiringPi/WiringPi/releases/download/3.4/wiringpi_3.4_arm64.deb
+sudo dpkg -i wiringpi_3.4_arm64.deb
+rm wiringpi_3.4_arm64.deb
 ```
 
 ### Optional
