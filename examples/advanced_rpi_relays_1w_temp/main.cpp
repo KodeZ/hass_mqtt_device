@@ -36,7 +36,7 @@
 #include <memory>
 #include <string>
 #include <thread> // for std::this_thread::sleep_for
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(ARM_ARCH) || defined(ARM64_ARCH)
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
@@ -69,7 +69,7 @@ void pullUpDnControl(int pin, int mode)
 {
     LOG_DEBUG("Relay {} set to mode {}", pin, mode);
 }
-#endif // else (i.e not __arm__)
+#endif
 
 const int tick_size_ms = 1000;
 bool stop_threads = false;

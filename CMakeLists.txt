@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 
 project(hass_mqtt_device VERSION 0.0.1 LANGUAGES CXX)
 
+# Assume that we are on rPi if it is an arm variant
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    add_definitions(-DARM_ARCH)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    add_definitions(-DARM64_ARCH)
+endif()
+
 # Export compile flags
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
