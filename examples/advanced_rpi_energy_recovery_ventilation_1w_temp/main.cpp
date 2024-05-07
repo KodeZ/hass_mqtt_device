@@ -34,12 +34,20 @@
 #include <memory>
 #include <string>
 #include <thread> // for std::this_thread::sleep_for
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
 // Print warning to the compiler output
 #warning "Compiling for non-arm platform, using mock wiringPi functions"
+#define OUTPUT 0
+#define INPUT 0
+#define PUD_UP 0
+#define PUD_DOWN 0
+void wiringPiSetup()
+{
+    LOG_DEBUG("wiringPiSetup called");
+}
 void digitalWrite(int pin, bool state)
 {
     LOG_DEBUG("Relay {} set to {}", pin, state);
@@ -50,6 +58,14 @@ bool digitalRead(int pin)
     state = !state;
     LOG_DEBUG("Relay {} read", pin);
     return state;
+}
+void pinMode(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
+}
+void pullUpDnControl(int pin, int mode)
+{
+    LOG_DEBUG("Relay {} set to mode {}", pin, mode);
 }
 #endif
 
@@ -334,14 +350,12 @@ int main(int argc, char* argv[])
         }
     }
 
-#ifdef __arm__
     wiringPiSetup();
     pinMode(RECOVER_ROTOR, OUTPUT);
     pinMode(SPEED_LOW, OUTPUT);
     pinMode(SPEED_MED_HIGH, OUTPUT);
     pinMode(RECOVER_ROTOR_POSITION, INPUT);
     pullUpDnControl(RECOVER_ROTOR_POSITION, PUD_UP);
-#endif
 
     recovery_enabled = true;
     setFanSpeed(start_fan_mode);

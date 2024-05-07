@@ -22,7 +22,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing

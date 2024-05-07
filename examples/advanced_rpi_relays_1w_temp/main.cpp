@@ -36,7 +36,7 @@
 #include <memory>
 #include <string>
 #include <thread> // for std::this_thread::sleep_for
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 #include <wiringPi.h>
 #else
 // Mock the wiringPi functions for non-arm platforms, usually PC for testing
