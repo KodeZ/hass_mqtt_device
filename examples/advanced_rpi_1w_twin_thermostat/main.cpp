@@ -81,8 +81,8 @@ double hystreresis = 0.4;
 const int R1 = 12;
 const int R2 = 13;
 const int R3 = 14;
-const int Vclose = 8;
-const int Vopen = 9;
+const int Vclose = 9;
+const int Vopen = 8;
 
 const int VALVE_POSITION_MOTOR_DURATION = 3; // Input from shifter
 
@@ -147,17 +147,17 @@ void heaterThread()
     while(!stop_threads)
     {
         // Control the electric heater
-        if(average_temp < (heating_setpoint + 0.5 + (hystreresis / 2)))
+        if(average_temp < (heating_setpoint - 0.5 - (hystreresis / 2)))
         {
             electric_heater_value = std::min(1.0, electric_heater_value + 0.03);
         }
-        else if(average_temp > (heating_setpoint + 0.5 - (hystreresis / 2)))
+        else if(average_temp > (heating_setpoint - 0.5 + (hystreresis / 2)))
         {
             electric_heater_value = std::max(0.0, electric_heater_value - 0.03);
         }
 
         // Control the valve, but do not add the 0.5 degrees to the setpoint, but rather subtract it
-        if(average_temp < (heating_setpoint - 0.5 + (hystreresis / 2)))
+        if(average_temp < (heating_setpoint + 0.5 - (hystreresis / 2)))
         {
             LOG_DEBUG("Opening valve start");
             digitalWrite(Vclose, true);
@@ -167,7 +167,7 @@ void heaterThread()
             LOG_DEBUG("Opening valve end");
             digitalWrite(Vclose, false);
         }
-        else if(average_temp > (heating_setpoint - 0.5 - (hystreresis / 2)))
+        else if(average_temp > (heating_setpoint + 0.5 + (hystreresis / 2)))
         {
             digitalWrite(Vclose, false);
             digitalWrite(Vopen, true);
