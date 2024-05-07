@@ -254,7 +254,7 @@ int sanitizeConfig()
 {
     // First check that the required fields are present
     if(!config.contains("ip") || !config.contains("port") || !config.contains("username") ||
-       !config.contains("password") || !config.contains("functions") || !config.contains("status_file"))
+       !config.contains("password") || !config.contains("status_file"))
     {
         LOG_ERROR("Config file does not contain the required fields");
         return 1;
