@@ -10,7 +10,7 @@ target_link_libraries(advanced_rpi_energy_recovery_ventilation_1w_temp PRIVATE h
 target_include_directories(advanced_rpi_energy_recovery_ventilation_1w_temp PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 # Conditionally link wiringPi for ARM architectures
-if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
     find_library(WIRINGPI_LIBRARIES NAMES wiringPi)
     if(WIRINGPI_LIBRARIES)
         target_link_libraries(advanced_rpi_energy_recovery_ventilation_1w_temp PRIVATE ${WIRINGPI_LIBRARIES})
