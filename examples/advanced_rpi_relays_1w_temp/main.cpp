@@ -82,7 +82,7 @@ bool has_read_temp = false;
 // Temperature reading thread
 void tempReadingLoop()
 {
-    LOG_INFO("Starting temp sensor thread");
+    LOG_TRACE("Starting temp sensor thread");
     const std::string base_path = "/sys/bus/w1/devices";
     int temp_read_counter = 0;
     while(!stop_threads)
@@ -264,6 +264,10 @@ void saveStatus()
         nlohmann::json status_json;
         for(auto& function : config["functions"])
         {
+            if(!function.contains("value"))
+            {
+                continue;
+            }
             function["value_saved"] = function["value"];
             nlohmann::json function_json;
             function_json["name"] = function["name"];
@@ -280,6 +284,49 @@ void saveStatus()
     {
         LOG_ERROR("Could not open status file for writing");
     }
+}
+
+void readStatus()
+{
+    LOG_TRACE("readStatus start");
+    auto status_file_name = config.at("status_file").get<std::string>();
+    std::ifstream status_file(status_file_name);
+    if(status_file.good())
+    {
+        try
+        {
+            nlohmann::json status_json = nlohmann::json::parse(status_file);
+            for(const auto& function : status_json["functions"])
+            {
+                if(function.contains("value") && function.contains("name"))
+                {
+                    LOG_DEBUG("Setting value for {} to {}", function["name"], function["value"]);
+
+                    // Find name in config, and set value
+                    for(auto& config_function : config["functions"])
+                    {
+                        if(config_function["name"] == function["name"])
+                        {
+                            config_function["value"] = function["value"];
+                            config_function["value_saved"] = function["value"];
+                            config_function["updated"] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        catch(const nlohmann::json::exception& e)
+        {
+            LOG_ERROR("Error parsing JSON: {}", e.what());
+        }
+        status_file.close();
+    }
+    else
+    {
+        std::cerr << "Could not open status file" << std::endl;
+    }
+    LOG_TRACE("readStatus end");
 }
 
 void controlNumberCallback(int index, double number)
@@ -423,40 +470,12 @@ int main(int argc, char* argv[])
         return ret;
     }
 
-    // Read the status file
-    {
-        LOG_DEBUG("Reading status file");
-        auto status_file_name = config.at("status_file").get<std::string>();
-        std::ifstream status_file(status_file_name);
-        if(status_file.good())
-        {
-            int i = 0;
-            try
-            {
-                nlohmann::json status_json = nlohmann::json::parse(status_file);
-                for(const auto& function : status_json["functions"])
-                {
-                    if(function.contains("value"))
-                    {
-                        config["functions"][i]["value"] = function["value"];
-                    }
-                    ++i;
-                }
-            }
-            catch(const nlohmann::json::exception& e)
-            {
-                LOG_ERROR("Error parsing JSON: {}", e.what());
-            }
-            status_file.close();
-        }
-        else
-        {
-            std::cerr << "Could not open status file" << std::endl;
-        }
-    }
+    // Read the status file if there is one
+    readStatus();
 
     // Set the pinModes for the gpio pins
     LOG_DEBUG("Setting pin modes");
+
     wiringPiSetup();
     for(const auto& function : config["functions"])
     {
@@ -475,7 +494,7 @@ int main(int argc, char* argv[])
                 // If switch, set to value xor active_state
                 else if(function["usage"]["type"] == "onoff")
                 {
-                    if(function.contains("value"))
+                    if(function.contains("value") && function["value"].is_boolean())
                     {
                         bool value = function["value"].get<bool>();
                         // If an active state has been defined and it is false, invert the value
@@ -540,7 +559,7 @@ int main(int argc, char* argv[])
                                                      unique_id);
 
     // Create the device
-    auto device = std::make_shared<DeviceBase>("Rpi relays 1w temp");
+    auto device = std::make_shared<DeviceBase>("Heating controls", "heating_controls");
 
     // Create the functions
     int index = 0;
@@ -604,9 +623,12 @@ int main(int argc, char* argv[])
     }
 
     // Register the device
+    LOG_TRACE("Registering device");
     connector->registerDevice(device);
     connector->connect();
 
+    // Send the status
+    LOG_TRACE("Sending intial status");
     device->sendStatus();
 
     // Run the device
@@ -674,7 +696,8 @@ void specialHandling()
     double to_houses_combined = NAN;
     for(const auto& function : config["functions"])
     {
-        if(function["type"] == "temp" && function["name"] == "To houses combined" && function.contains("value"))
+        if(function["type"] == "temp" && function["name"] == "To houses combined" && function.contains("value") &&
+           function["value"].is_number())
         {
             to_houses_combined = function["value"].get<double>();
             break;
@@ -714,11 +737,13 @@ void specialHandling()
     double temp_solar_from_collectors = NAN;
     for(const auto& function : config["functions"])
     {
-        if(function["type"] == "temp" && function["name"] == "Solar to collectors" && function.contains("value"))
+        if(function["type"] == "temp" && function["name"] == "Solar to collectors" && function.contains("value") &&
+           function["value"].is_number())
         {
             temp_solar_to_collectors = function["value"].get<double>();
         }
-        else if(function["type"] == "temp" && function["name"] == "Solar from collectors" && function.contains("value"))
+        else if(function["type"] == "temp" && function["name"] == "Solar from collectors" &&
+                function.contains("value") && function["value"].is_number())
         {
             temp_solar_from_collectors = function["value"].get<double>();
         }
