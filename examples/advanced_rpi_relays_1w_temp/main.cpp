@@ -29,6 +29,7 @@
 #include "math.h"
 
 #include <chrono> // for std::chrono::seconds
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -75,41 +76,8 @@ const int tick_size_ms = 1000;
 bool stop_threads = false;
 nlohmann::json config;
 
-const std::map<std::string, std::string> temp_sensors = {{"28-011833852dff", "From well"},
-                                                         {"28-011833b3d5ff", "Solar to collectors"},
-                                                         {"28-011833bea2ff", "Solar from collectors"},
-                                                         {"28-011833bb00ff", "Solar from loop/HE"},
-                                                         {"28-011833b6daff", "Before solar exchanger"},
-                                                         {"28-000004ef3fd2", "Return combined"},
-                                                         {"28-000004eeb1ac", "To tank"},
-                                                         {"28-000004ef7d14", "From well"},
-                                                         {"28-0118337534ff", "To houses combined"},
-                                                         {"28-011833843eff", "22 Return"},
-                                                         {"28-011833b179ff", "After solar HE"},
-                                                         {"28-011833b222ff", "After el-heater"},
-                                                         {"28-011833b25aff", "28 Return"},
-                                                         {"28-000004ef773e", "From tank"},
-                                                         {"28-0118339ba2ff", "24 Return"},
-                                                         {"28-000004d00a47", "After heat pump"},
-                                                         {"28-000004eea738", "To well"}};
-
-std::map<std::string, double> temp_temperatures = {{"From well", 5},
-                                                   {"Solar to collectors", 20},
-                                                   {"Solar from collectors", 20},
-                                                   {"Solar from loop/HE", 20},
-                                                   {"Before solar exchanger", 20},
-                                                   {"Return combined", 20},
-                                                   {"To tank", 20},
-                                                   {"From well", 20},
-                                                   {"To houses combined", 20},
-                                                   {"22 Return", 20},
-                                                   {"After solar HE", 20},
-                                                   {"After el-heater", 20},
-                                                   {"28 Return", 20},
-                                                   {"From tank", 20},
-                                                   {"24 Return", 20},
-                                                   {"After heat pump", 20},
-                                                   {"To well", 5}};
+// Will be updated on every read cycle. Should be reset by the user in order to detect when a new read has happened
+bool has_read_temp = false;
 
 // Temperature reading thread
 void tempReadingLoop()
@@ -149,14 +117,14 @@ void tempReadingLoop()
                             continue;
                         }
                         // Find function and store the value
-                        for(auto function : config["functions"])
+                        for(auto& function : config["functions"])
                         {
                             if(function["type"] != "temp" || function["usage"]["type"] != "1w" ||
                                function["usage"]["id"] != sensor)
                             {
                                 continue;
                             }
-                            if(function.contains("value") && function["value"] != temp && temp_read_counter > 3)
+                            if(!function.contains("value") || (function.contains("value") && function["value"] != temp))
                             {
                                 function["updated"] = true;
                             }
@@ -167,6 +135,7 @@ void tempReadingLoop()
                     }
                 }
             }
+            temp_read_counter++;
         }
         else
         {
@@ -264,32 +233,52 @@ void saveStatus()
             break;
         }
     }
-    if(changed)
+    if(!changed)
     {
-        LOG_DEBUG("Saving state");
-        auto status_file_name = config.at("status_file").get<std::string>();
-        std::ofstream status_file(status_file_name);
-        if(status_file.is_open())
+        LOG_DEBUG("No changes to save");
+        return;
+    }
+    LOG_DEBUG("Saving state");
+    auto status_file_name = config.at("status_file").get<std::string>();
+    // Check if the folder exists, if not create it. If it fails, print error
+    auto folder = status_file_name.substr(0, status_file_name.find_last_of("/"));
+    try
+    {
+        if(!std::filesystem::exists(folder))
         {
-            nlohmann::json status_json;
-            for(auto& function : config["functions"])
+            if(!std::filesystem::create_directories(folder))
             {
-                function["value_saved"] = function["value"];
-                nlohmann::json function_json;
-                function_json["name"] = function["name"];
-                if(function.contains("value"))
-                {
-                    function_json["value"] = function["value"];
-                }
-                status_json["functions"].push_back(function_json);
+                LOG_ERROR("Folder for the status file does not exist. Could not create folder {}", folder);
+                return;
             }
-            status_file << status_json.dump(4);
-            status_file.close();
         }
-        else
+    }
+    catch(const std::exception& e)
+    {
+        LOG_ERROR("Error creating folder for status file: {}", e.what());
+        return;
+    }
+    std::ofstream status_file(status_file_name);
+    if(status_file.is_open())
+    {
+        nlohmann::json status_json;
+        for(auto& function : config["functions"])
         {
-            std::cerr << "Could not open status file" << std::endl;
+            function["value_saved"] = function["value"];
+            nlohmann::json function_json;
+            function_json["name"] = function["name"];
+            if(function.contains("value"))
+            {
+                function_json["value"] = function["value"];
+            }
+            status_json["functions"].push_back(function_json);
         }
+        status_file << status_json.dump(4);
+        status_file.close();
+    }
+    else
+    {
+        LOG_ERROR("Could not open status file for writing");
     }
 }
 
@@ -314,6 +303,15 @@ void controlSwitchCallback(int index, bool state)
         config["functions"][index]["value"] = state;
         config["functions"][index]["updated"] = true;
         LOG_INFO("number for index {} changed to {}", index, state);
+
+        bool value = config["functions"][index]["value"].get<bool>();
+        // If an active state has been defined and it is false, invert the value
+        if(config["functions"][index]["usage"].contains("active_state") &&
+           !config["functions"][index]["usage"]["active_state"])
+        {
+            value = !value;
+        }
+        digitalWrite(config["functions"][index]["usage"]["gpio"], value);
     }
     else
     {
@@ -374,6 +372,9 @@ void updateNumberPwmOutputs()
         status.close();
     }
 }
+
+// Forward declare the special handling function
+void specialHandling();
 
 // The main function.
 int main(int argc, char* argv[])
@@ -504,7 +505,8 @@ int main(int argc, char* argv[])
                 {
                     pullUpDnControl(function["usage"]["gpio"], PUD_DOWN);
                 }
-                else {
+                else
+                {
                     LOG_WARN("Unknown pull type {}", function["usage"]["pull"].get<std::string>());
                 }
             }
@@ -626,7 +628,7 @@ int main(int argc, char* argv[])
         // Update the number pwm outputs
         updateNumberPwmOutputs();
 
-        // Check if any values are updated
+        // Check if any values are updated, send the updated values on mqtt
         int i = 0;
         for(const auto& function : device->getFunctions())
         {
@@ -634,7 +636,7 @@ int main(int argc, char* argv[])
                config["functions"][i]["updated"] == true)
             {
                 config["functions"][i]["updated"] = false;
-                LOG_INFO("Updating function {} to {}", function->getName(), config["functions"][i].dump());
+                LOG_DEBUG("Updating function {} to {}", function->getName(), config["functions"][i].dump());
                 // For number types, we need to update the value as a double
                 if(config["functions"][i]["type"] == "number")
                 {
@@ -657,7 +659,101 @@ int main(int argc, char* argv[])
             ++i;
         }
 
+        specialHandling();
+
+        // LOG_DEBUG("Config: {}", config.dump());
+
         // Process messages from the MQTT server for 1 second
         connector->processMessages(tick_size_ms);
+    }
+}
+
+void specialHandling()
+{
+    // Find the "To houses combined" temperature. If above 43, turn off the switch named Varmepumpe. If below 40, turn on the switch named Varmepumpe
+    double to_houses_combined = NAN;
+    for(const auto& function : config["functions"])
+    {
+        if(function["type"] == "temp" && function["name"] == "To houses combined" && function.contains("value"))
+        {
+            to_houses_combined = function["value"].get<double>();
+            break;
+        }
+    }
+    if(std::isnan(to_houses_combined))
+    {
+        LOG_ERROR("Could not find the temperature sensor named To houses combined");
+    }
+    else
+    {
+        LOG_DEBUG("To houses combined: {}", to_houses_combined);
+        for(auto& function : config["functions"])
+        {
+            if(function["type"] == "switch" && function["name"] == "Varmepumpe")
+            {
+                bool value = function["value"].get<bool>();
+                if(to_houses_combined > 43 && value)
+                {
+                    function["value"] = false;
+                    function["updated"] = true;
+                    LOG_DEBUG("Turning off Varmepumpe");
+                }
+                else if(to_houses_combined < 40 && !value)
+                {
+                    function["value"] = true;
+                    function["updated"] = true;
+                    LOG_DEBUG("Turning off Varmepumpe");
+                }
+                break;
+            }
+        }
+    }
+    // Check if the temperature "Solar to collectors" against "Solar from collectors".
+    // If it is more than 3 degrees warmer turn on the switch called Use solar, unless the To houses combined is above 75
+    double temp_solar_to_collectors = NAN;
+    double temp_solar_from_collectors = NAN;
+    for(const auto& function : config["functions"])
+    {
+        if(function["type"] == "temp" && function["name"] == "Solar to collectors" && function.contains("value"))
+        {
+            temp_solar_to_collectors = function["value"].get<double>();
+        }
+        else if(function["type"] == "temp" && function["name"] == "Solar from collectors" && function.contains("value"))
+        {
+            temp_solar_from_collectors = function["value"].get<double>();
+        }
+        if(!std::isnan(temp_solar_to_collectors) && !std::isnan(temp_solar_from_collectors))
+        {
+            break;
+        }
+    }
+    if(std::isnan(temp_solar_to_collectors) || std::isnan(temp_solar_from_collectors) || std::isnan(to_houses_combined))
+    {
+        LOG_ERROR("Could not find the temperature sensors named To houses combined, Solar to collectors and/or Solar "
+                  "from collectors");
+    }
+    else
+    {
+        LOG_DEBUG("Solar to collectors:{} from:{}", temp_solar_to_collectors, temp_solar_from_collectors);
+        for(auto& function : config["functions"])
+        {
+            if(function["type"] == "switch" && function["name"] == "Use solar")
+            {
+                bool value = function["value"].get<bool>();
+                if(temp_solar_to_collectors - temp_solar_from_collectors > 3 && to_houses_combined < 75 && !value)
+                {
+                    function["value"] = true;
+                    function["updated"] = true;
+                    LOG_DEBUG("Turning on Use solar");
+                }
+                else if(temp_solar_to_collectors - temp_solar_from_collectors <= 3 && value)
+                {
+                    function["value"] = false;
+                    function["updated"] = true;
+                    LOG_DEBUG("Turning off Use solar");
+                }
+                break;
+            }
+        }
     }
 }

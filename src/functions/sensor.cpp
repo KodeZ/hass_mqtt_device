@@ -22,6 +22,7 @@ template<typename T>
 SensorFunction<T>::SensorFunction(const std::string& function_name, const SensorAttributes& attributes)
     : FunctionBase(function_name)
     , m_attributes(attributes)
+    , m_has_data(false)
 {}
 
 template<typename T>
