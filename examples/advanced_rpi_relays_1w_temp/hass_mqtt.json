@@ -1,5 +1,6 @@
 {
     "devicename": "Relays 1w combined",
+    "unique_id": "relays_1w_combined",
     "ip": "10.0.0.10",
     "port": 1883,
     "username": "hass",

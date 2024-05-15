@@ -152,7 +152,8 @@ int sanitizeConfig()
 {
     // First check that the required fields are present
     if(!config.contains("ip") || !config.contains("port") || !config.contains("username") ||
-       !config.contains("password") || !config.contains("functions") || !config.contains("status_file"))
+       !config.contains("password") || !config.contains("functions") || !config.contains("status_file")
+       || !config.contains("unique_id"))
     {
         LOG_ERROR("Config file does not contain the required fields");
         return 1;
@@ -300,7 +301,7 @@ void readStatus()
             {
                 if(function.contains("value") && function.contains("name"))
                 {
-                    LOG_DEBUG("Setting value for {} to {}", function["name"], function["value"]);
+                    LOG_DEBUG("Setting value for {} to {}", function["name"].get<std::string>(), function["value"].get<std::string>());
 
                     // Find name in config, and set value
                     for(auto& config_function : config["functions"])
@@ -559,7 +560,7 @@ int main(int argc, char* argv[])
                                                      unique_id);
 
     // Create the device
-    auto device = std::make_shared<DeviceBase>("Heating controls", "heating_controls");
+    auto device = std::make_shared<DeviceBase>("Heating controls", config.at("unique_id").get<std::string>());
 
     // Create the functions
     int index = 0;
