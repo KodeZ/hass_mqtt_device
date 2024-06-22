@@ -16,18 +16,18 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-# Specify the required C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the library
 add_library(hass_mqtt_device SHARED ${SOURCES})
+set_target_properties(hass_mqtt_device PROPERTIES
+    # Specify the required C++ standard
+    CXX_STANDARD 17
+)
 
 # Compiler flags
-target_compile_options(hass_mqtt_device PRIVATE 
+target_compile_options(hass_mqtt_device PRIVATE
   $<$<CONFIG:Debug>:-g3 -O0>
   $<$<CONFIG:Release>:-O3>
 )
@@ -39,7 +39,7 @@ if(CCACHE_PROGRAM)
 endif()
 
 # Include directories
-target_include_directories(hass_mqtt_device PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(hass_mqtt_device PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(hass_mqtt_device PUBLIC ${MOSQUITTO_INCLUDE_DIRS})
 
 # Find required libraries
@@ -52,7 +52,7 @@ target_link_libraries(hass_mqtt_device ${MOSQUITTO_LIBRARIES} spdlog::spdlog)
 
 # Specify where the library should be installed
 install(TARGETS hass_mqtt_device DESTINATION lib)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include)
 
 # For tests, you can use CTest
 #enable_testing()
