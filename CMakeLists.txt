@@ -65,10 +65,10 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include)
 #)
 
 # For examples
-add_subdirectory(examples)
+# add_subdirectory(examples)
 
 # Create a custom target for building examples
-add_custom_target(examples
-    COMMAND ${CMAKE_COMMAND} --build . --target all
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/examples
-)
+#add_custom_target(examples
+#    COMMAND ${CMAKE_COMMAND} --build . --target all
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/examples
+#)
