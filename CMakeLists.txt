@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(hass_mqtt_device VERSION 0.0.1 LANGUAGES CXX)
 
+option(HASS_MQTT_DEVICE_EXAMPLES "Build Examples" OFF)
+
 # Assume that we are on rPi if it is an arm variant
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     add_definitions(-DARM_ARCH)
@@ -65,11 +67,13 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include)
 #    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tests
 #)
 
-# For examples
-# add_subdirectory(examples)
+if(HASS_MQTT_DEVICE_EXAMPLES)
+    # For examples
+    add_subdirectory(examples)
 
-# Create a custom target for building examples
-#add_custom_target(examples
-#    COMMAND ${CMAKE_COMMAND} --build . --target all
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/examples
-#)
+    # Create a custom target for building examples
+    add_custom_target(examples
+        COMMAND ${CMAKE_COMMAND} --build . --target all
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/examples
+    )
+endif()
