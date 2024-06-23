@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(hass_mqtt_device VERSION 0.0.1 LANGUAGES CXX)
 
 option(HASS_MQTT_DEVICE_EXAMPLES "Build Examples" OFF)
+option(HASS_MQTT_DEVICE_STATIC "Build as a static lib" OFF)
 
 # Assume that we are on rPi if it is an arm variant
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
@@ -22,7 +23,11 @@ endif()
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the library
-add_library(hass_mqtt_device SHARED ${SOURCES})
+if(HASS_MQTT_DEVICE_STATIC)
+    add_library(hass_mqtt_device STATIC ${SOURCES})
+else()
+    add_library(hass_mqtt_device SHARED ${SOURCES})
+endif()
 set_target_properties(hass_mqtt_device PROPERTIES
     # Specify the required C++ standard
     CXX_STANDARD 17
