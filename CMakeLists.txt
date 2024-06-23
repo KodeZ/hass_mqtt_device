@@ -60,6 +60,7 @@ target_link_libraries(hass_mqtt_device ${MOSQUITTO_LIBRARIES} nlohmann_json::nlo
 
 if(HASS_MQTT_DEVICE_SPDLOG)
     find_package(spdlog)
+    add_definitions(-DHASS_MQTT_DEVICE_SPDLOG)
     if(spdlog_FOUND)
         target_link_libraries(hass_mqtt_device spdlog::spdlog)
     endif()

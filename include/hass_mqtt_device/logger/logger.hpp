@@ -6,7 +6,7 @@
 
 #pragma once
 
-#if __has_include(<spdlog/spdlog.h>)
+#if __has_include(<spdlog/spdlog.h>) && defined(HASS_MQTT_DEVICE_SPDLOG)
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
