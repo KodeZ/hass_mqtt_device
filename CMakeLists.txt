@@ -4,6 +4,7 @@ project(hass_mqtt_device VERSION 0.0.1 LANGUAGES CXX)
 
 option(HASS_MQTT_DEVICE_EXAMPLES "Build Examples" OFF)
 option(HASS_MQTT_DEVICE_STATIC "Build as a static lib" OFF)
+option(HASS_MQTT_DEVICE_SPDLOG "Use SPDLOG lib" ON)
 
 # Assume that we are on rPi if it is an arm variant
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
@@ -52,13 +53,16 @@ target_include_directories(hass_mqtt_device PUBLIC ${MOSQUITTO_INCLUDE_DIRS})
 # Find required libraries
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MOSQUITTO REQUIRED libmosquitto)
-find_package(spdlog)
 find_package(nlohmann_json REQUIRED)
 
 # Link libraries
 target_link_libraries(hass_mqtt_device ${MOSQUITTO_LIBRARIES} nlohmann_json::nlohmann_json)
-if(spdlog_FOUND)
-    target_link_libraries(hass_mqtt_device spdlog::spdlog)
+
+if(HASS_MQTT_DEVICE_SPDLOG)
+    find_package(spdlog)
+    if(spdlog_FOUND)
+        target_link_libraries(hass_mqtt_device spdlog::spdlog)
+    endif()
 endif()
 
 
