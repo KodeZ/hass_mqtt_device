@@ -33,3 +33,5 @@
 
 .clangd
 build
+
+.vs/
