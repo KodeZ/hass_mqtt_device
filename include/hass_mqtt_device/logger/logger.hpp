@@ -6,6 +6,8 @@
 
 #pragma once
 
+#if __has_include(<spdlog/spdlog.h>) && defined(HASS_MQTT_DEVICE_SPDLOG)
+
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -21,3 +23,14 @@
 #define LOG_ERROR(...) spdlog::error(__VA_ARGS__)
 #define LOG_DEBUG(...) spdlog::debug(__VA_ARGS__)
 #define LOG_TRACE(...) spdlog::trace(__VA_ARGS__)
+
+#else
+
+#define INIT_LOGGER(debug)
+#define LOG_INFO(...)
+#define LOG_WARN(...)
+#define LOG_ERROR(...)
+#define LOG_DEBUG(...)
+#define LOG_TRACE(...)
+
+#endif
